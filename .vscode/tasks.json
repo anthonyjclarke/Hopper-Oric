@@ -1,0 +1,38 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build HOPPER.TAP",
+      "type": "shell",
+      "command": "make",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": {
+        "owner": "ca65",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.*)\\((\\d+)\\):\\s+(Error|Warning):\\s+(.*)$",
+          "file": 1, "line": 2, "severity": 3, "message": 4
+        }
+      }
+    },
+    {
+      "label": "Verify against original",
+      "type": "shell",
+      "command": "make verify",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run in Auric (Oric-1)",
+      "type": "shell",
+      "command": "make run",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run in Auric with debugger",
+      "type": "shell",
+      "command": "make debug",
+      "problemMatcher": []
+    }
+  ]
+}
