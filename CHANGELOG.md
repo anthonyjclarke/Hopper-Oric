@@ -39,6 +39,15 @@
 
 ### Changed
 
+- The Oric appendix moves out of Reference into its own Appendix group in the handbook and index, and splits in two.
+  `oric_history.md` ("History of Oric") is expanded into the full story: Tangerine and the Microtan, the Oric-1 and its
+  French success, the 1983 factory fire, Edenspring and the Atmos, the peripherals, the Stratos and the receivers,
+  Eureka and the Telestrat, the Pravetz 8D and Nova 64 clones, software and magazines, a timeline and today's community
+  and hardware. `oric_specs.md` ("Oric Tech Specs") takes the specifications, memory map, graphics, sound and emulator
+  sections, with new tables of the models and their storage. Both are general information on the Oric, with no game
+  named, and the same files in every Oric reconstruction; the game's own screen gives way to an Auric capture of the
+  HIRES BASIC example (`oric-basic-hires.png`). The founders are corrected to Paul Johnson, Mark Rainer and Nigel Penton
+  Tilbury, with Barry Muncaster joining later.
 - C64 controls choice 1 is Z, X, K, M (was Z, X, `@`, `/`, which move with host keymaps in VICE).
 - C64 Remix: the frog can stand in the outermost playfield columns (2 and 38–39). On the Oric it died on reaching them,
   so the ninth hop sideways from the start killed it on visible grass (`CheckFrogBounds` treats `frog_col`, one less

@@ -1,51 +1,58 @@
 {
-  "output": "docs/HOPPER.html",
-  "title": "Hopper",
-  "brand": [
-    "HOPPER",
-    "Oric · C64"
-  ],
-  "logo": "docs/images/graphics/frog-icon.png",
-  "logoAlt": "The frog, decoded from the Oric game's glyphs",
-  "retroFont": {
-    "text": "docs/tools/fonts/C64_Pro-STYLE.woff2",
-    "mono": "docs/tools/fonts/C64_Pro_Mono-STYLE.woff2",
-    "textFamily": "C64 Pro",
-    "monoFamily": "C64 Pro Mono",
-    "labelOff": "Switch to the C64 font",
-    "labelOn": "Switch to the standard font",
-    "credit": "C64 Pro and C64 Pro Mono fonts © 2010–2019 Style (style64.org/c64-truetype), embedded unmodified with @font-face as their licence allows."
-  },
-  "description": "Hopper (Oric-1, A.J. Clarke, PSS, 1983) reconstructed as byte-identical source and re-hosted on the Commodore 64: play, the original release, graphics, sound, architecture, data formats, the source and toolchain, the C64 port and its platform layer.",
-  "includes": "screens and glyphs decoded from the Oric tape, VICE screenshots of the C64 build, the original cover and advert, and diagrams",
-  "groups": [
-    {
-      "id": "guide",
-      "label": "The game and its code",
-      "sources": [
-        "docs/README.md",
-        "docs/player_guide.md",
-        "docs/original_release.md",
-        "docs/graphics.md",
-        "docs/sound.md",
-        "docs/architecture.md",
-        "docs/data_formats.md",
-        "docs/source_guide.md"
-      ]
+    "output": "docs/HOPPER.html",
+    "title": "Hopper",
+    "brand": [
+        "HOPPER",
+        "Oric · C64"
+    ],
+    "logo": "docs/images/graphics/frog-icon.png",
+    "logoAlt": "The frog, decoded from the Oric game's glyphs",
+    "retroFont": {
+        "text": "docs/tools/fonts/C64_Pro-STYLE.woff2",
+        "mono": "docs/tools/fonts/C64_Pro_Mono-STYLE.woff2",
+        "textFamily": "C64 Pro",
+        "monoFamily": "C64 Pro Mono",
+        "labelOff": "Switch to the C64 font",
+        "labelOn": "Switch to the standard font",
+        "credit": "C64 Pro and C64 Pro Mono fonts © 2010–2019 Style (style64.org/c64-truetype), embedded unmodified with @font-face as their licence allows."
     },
-    {
-      "id": "reference",
-      "label": "Reference",
-      "sources": [
-        "docs/porting.md",
-        "docs/remix.md",
-        "docs/platform_layer.md",
-        "docs/quirks.md",
-        "docs/oric.md",
-        "CHANGELOG.md",
-        "docs/html_documentation.md",
-        "docs/credits.md"
-      ]
-    }
-  ]
+    "description": "Hopper (Oric-1, A.J. Clarke, PSS, 1983) reconstructed as byte-identical source and re-hosted on the Commodore 64: play, the original release, graphics, sound, architecture, data formats, the source and toolchain, the C64 port and its platform layer.",
+    "includes": "screens and glyphs decoded from the Oric tape, VICE screenshots of the C64 build, the original cover and advert, and diagrams",
+    "groups": [
+        {
+            "id": "guide",
+            "label": "The game and its code",
+            "sources": [
+                "docs/README.md",
+                "docs/player_guide.md",
+                "docs/original_release.md",
+                "docs/graphics.md",
+                "docs/sound.md",
+                "docs/architecture.md",
+                "docs/data_formats.md",
+                "docs/source_guide.md"
+            ]
+        },
+        {
+            "id": "reference",
+            "label": "Reference",
+            "sources": [
+                "docs/porting.md",
+                "docs/remix.md",
+                "docs/platform_layer.md",
+                "docs/quirks.md",
+                "CHANGELOG.md",
+                "docs/html_documentation.md",
+                "docs/credits.md"
+            ]
+        },
+        {
+            "id": "appendix",
+            "label": "Appendix",
+            "sources": [
+                "docs/oric_history.md",
+                "docs/oric_specs.md"
+            ]
+        }
+    ]
 }

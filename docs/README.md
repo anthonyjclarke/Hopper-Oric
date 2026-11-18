@@ -32,10 +32,18 @@ in a browser.
 | [remix.md](remix.md)                           | C64 Remix: every deliberate change from the original   |
 | [platform_layer.md](platform_layer.md)         | The C64 platform layer, module by module               |
 | [quirks.md](quirks.md)                         | Places where the original does something unintended    |
-| [oric.md](oric.md)                             | Appendix: the Oric's history, specs, graphics, sound   |
 | [CHANGELOG.md](../CHANGELOG.md)                | Release history                                        |
 | [html_documentation.md](html_documentation.md) | Regenerating the figures, screenshots and the handbook |
 | [credits.md](credits.md)                       | Who made the game and this repository; tools and links |
+
+---
+
+## Appendix
+
+| Document                           | Covers                                                    |
+|:-----------------------------------|:----------------------------------------------------------|
+| [oric_history.md](oric_history.md) | History of Oric: Tangerine, the models, clones, community |
+| [oric_specs.md](oric_specs.md)     | Oric Tech Specs: hardware, graphics, sound, emulators     |
 
 Oric names and addresses follow the reconstruction ([`src/hopper.s`](../src/hopper.s),
 [`src/vars.inc`](../src/vars.inc), [`src/oric.inc`](../src/oric.inc)). C64 names follow `c64/src/`; where a C64 routine

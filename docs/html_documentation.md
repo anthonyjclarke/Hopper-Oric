@@ -63,7 +63,9 @@ regenerates it whenever a source changes. `just docs-graphics` and `just docs-sc
   Oric's serial attributes; letters come from VICE's C64 character ROM, narrowed to 6 pixels, because the Oric ROM font
   is not on the tape. The figures are deterministic.
 - **Oric appendix figures.** `render_oric.py` draws the palette, a HIRES line of serial attributes and the AY's
-  envelope shapes for `oric.md`. It reads nothing from the game, so the file is the same in every Oric reconstruction.
+  envelope shapes for `oric_specs.md`. It reads nothing from the game, so the file is the same in every Oric reconstruction.
+- **Oric appendix screenshot.** `oric-basic-hires.png` is a capture of `oric_specs.md`'s HIRES BASIC example running in the
+  Auric emulator on the Atmos ROM; it is not generated, so re-render it by hand if the example changes.
 - **The start-up picture's design.** `tools/make_intro.py` writes `docs/images/graphics/intro-design.png` with
   `c64/src/intro.rle` (`make c64-intro`).
 
