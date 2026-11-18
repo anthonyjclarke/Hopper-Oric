@@ -4,6 +4,18 @@
 
 ### Added
 
+- C64 Enhanced road markings (V6): in an Enhanced game the row interrupts for Oric rows 20 and 23 turn `$D021` grey for
+  one raster line, where the port hides the Oric's dashed lines (rows 19 and 22). Only while those rows show lanes, so
+  the sheet-start signs are untouched.
+- C64 Enhanced multicolour lanes (V1 of `docs/enhanced.md`): in an Enhanced game, logs, turtles, trucks, cars and the
+  hedge are drawn in multicolour with a shade and a top-edge highlight per lane, from a second character set at `$8800`
+  that `c64/src/enhanced.s` builds from the game's own glyphs (`McBuild`, `McChar`) and keeps in step as the game
+  rewrites the frog, home frogs and turtle frames (`McDynamic`, with sentinel glyphs to catch `InitGame`'s copy). The
+  raster interrupt sets `$D022`/`$D023` per row; FastRow and ParseRow give lane rows the ink + 8 (`McRowSetup`). No game
+  bytes changed. All of it sits behind `zMcPlay` (Enhanced on the play screen), so menus, credits and Classic run as
+  before.
+- `make c64-smoke` also builds `c64/build/test-enhanced/` (`-D AUTOTEST_ENHANCED`, no F1) for the `enh-play`, `enh-hops`
+  and `enh-later` captures.
 - C64 version switch (V0 of `docs/enhanced.md`): row 25 of the hi-score screen shows `[F1] VERSION  CLASSIC  ENHANCED`,
   and F1 or the joystick left or right flips it (`VersionKeys`, `DrawVersionLine`, from `TitleTickC64`), restarting the
   attract timer. The choice is the zero-page flag `zEnhanced`, set to Enhanced at power-up and kept through RESTORE.
@@ -71,6 +83,11 @@
 
 ### Fixed
 
+- F1 on the hi-score screen was sometimes lost: `CheckMenuKeys` draws a frame before reading the key and dropped an F1
+  that arrived meanwhile. `ReadRomKey` now holds F1 back in `versionReq` for `VersionKeys`.
+- The scripted test's keys were too close together (15 frames between redefine prompts, 50 between the menus): a few
+  extra cycles lost a key and left a menu waiting. The script now leaves 25 frames between keys and 80 between the
+  menus, presses F1 at 2500 and starts the game at 2600; every capture frame in `tools/c64_screens.py` moves with it.
 - The scripted C64 test (`c64/src/autotest.s`) pressed 1 on the credits screen, so the `hiscores` capture showed the
   credits: the hi-score screen comes later since `AttractWait`. The script now waits for it, presses F1 there (new
   `version` capture) and starts the game 225 frames later; the play captures move with it. `credits-done` moves from

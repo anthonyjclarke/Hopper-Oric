@@ -30,7 +30,8 @@
         .include "c64.inc"
 
         .export InitVideo, SetRowMap, Present, ParseNextRow, RefreshCharsets
-        .export rowPaper, rowCset
+        .export rowPaper, rowCset, rowMap, curMap
+        .import McRowSetup, McDynamic, mcStale
 
         .segment "CODE"
 
@@ -248,6 +249,14 @@ Doubled:
 ; character sets. About 70,000 cycles.
 ;------------------------------------------------------------------------------
 SetRowMap:
+        sta     curMap
+        ldx     #1
+        stx     mcStale                 ; Enhanced: rebuild the multicolour set
+        ldx     #0                      ; multicolour lanes only on the play
+        cmp     #MAP_GAME               ; screen in Enhanced (zMcPlay)
+        bne     :+
+        ldx     zEnhanced
+:       stx     zMcPlay
         tax
         lda     MapLo,x
         sta     zPtr
@@ -314,7 +323,10 @@ SetRowMap:
 ; Present - show the Oric screen. Clobbers A, X, Y and the zp temporaries.
 ;------------------------------------------------------------------------------
 Present:
-        ldx     #0
+        bit     zMcPlay                 ; Enhanced play: keep the multicolour
+        bpl     :+                      ; set in step with the game's glyphs
+        jsr     McDynamic
+:       ldx     #0
 @row:   stx     zRow
         lda     rowComplex,x
         bne     @parse
@@ -407,6 +419,9 @@ ParseNextRow:
 ; ParseRow would. Anything unusual there (a mode attribute, a character)
 ; goes to the full parse.
 ;------------------------------------------------------------------------------
+FastRowFull:                            ; (in branch range of the cell loop)
+        ldx     zRow
+        jmp     ParseRow
 FastRow:
         lda     #7
         sta     zInk
@@ -416,11 +431,11 @@ FastRow:
 @cell:  lda     (zSrc),y
         and     #$7F
         cmp     #$20
-        bcs     @full
+        bcs     FastRowFull
         cmp     #$08
         bcc     @ink
         cmp     #$10
-        bcc     @full                   ; mode attribute
+        bcc     FastRowFull             ; mode attribute
         cmp     #$18
         bcs     @nx                     ; video mode attribute: ignored
         and     #7
@@ -455,7 +470,10 @@ FastRow:
         sta     zCol+1
         ldy     zInk
         lda     C64Colour,y
-        ldy     #COLS-1
+        bit     zMcPlay
+        bpl     :+
+        jsr     McRowSetup              ; Enhanced lanes: ink + 8, CS_MC
+:       ldy     #COLS-1
 @fill:  sta     (zCol),y
         dey
         bpl     @fill
@@ -639,13 +657,32 @@ ParseRow:
         sta     rowCset,x
 @cs:    lda     zComplex
         sta     rowComplex,x
-        ldy     #0
+        bne     :+
+        bit     zMcPlay
+        bpl     :+
+        jsr     McSimple
+:       ldy     #0
         lda     (zSrc),y
         sta     rowSave0,x
         iny
         lda     (zSrc),y
         sta     rowSave1,x
         rts
+
+; McSimple - ParseRow found row X simple: on an Enhanced lane row, colour
+; columns 2-39 with the lane's multicolour ink, as FastRow would.
+McSimple:
+        ldy     zInk
+        lda     C64Colour,y
+        jsr     McRowSetup
+        cmp     #8
+        bcc     @r
+        ldy     #COLS-1
+@f:     sta     (zCol),y
+        dey
+        cpy     #1
+        bne     @f
+@r:     rts
 
 ;------------------------------------------------------------------------------
 ; CopyRows - per C64 row, 38 x (lda Oric cell / sta VIC cell) for columns
@@ -764,3 +801,4 @@ rowSave1:       .res C64_ROWS
 rowPaper:       .res C64_ROWS
 rowCset:        .res C64_ROWS
 rowDH:          .res C64_ROWS
+curMap:         .res 1          ; the last SetRowMap (MAP_*)

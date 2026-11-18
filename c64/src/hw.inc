@@ -22,6 +22,8 @@ VIC_IRQ_FLAG    = $D019
 VIC_IRQ_MASK    = $D01A
 VIC_BORDER      = $D020
 VIC_BG0         = $D021
+VIC_BG1         = $D022         ; multicolour: shade (Enhanced)
+VIC_BG2         = $D023         ; multicolour: highlight (Enhanced)
 
 ; --- CIA ----------------------------------------------------------------------
 CIA1_PRA        = $DC00         ; keyboard column select (write) / joystick 2 (read)
@@ -53,12 +55,15 @@ VIC_BANK_BITS   = %01           ; $DD00 bits 0-1 for bank 2
 VIC_SCREEN      = $8000         ; what the VIC shows: 40x25 codes, from Present
 CHARSET_DHTOP   = $A000         ; double-height top halves (+ inverse)
 CHARSET_DHBOT   = $A800         ; double-height bottom halves (+ inverse)
+CHARSET_MC      = $8800         ; Enhanced: multicolour lane glyphs (enhanced.s); not $9000-$9FFF,
+                                ; where the VIC sees the character ROM
 COLOUR_RAM      = $D800
 
 ; $D018: screen at bank + 0, character set per row
 D018_NORMAL     = ((VIC_SCREEN - $8000) / $400) << 4 | ((CHARSET - $8000) / $800) << 1
 D018_DHTOP      = ((VIC_SCREEN - $8000) / $400) << 4 | ((CHARSET_DHTOP - $8000) / $800) << 1
 D018_DHBOT      = ((VIC_SCREEN - $8000) / $400) << 4 | ((CHARSET_DHBOT - $8000) / $800) << 1
+D018_MC         = ((VIC_SCREEN - $8000) / $400) << 4 | ((CHARSET_MC - $8000) / $800) << 1
 
 ORIC_ROWS       = 28
 C64_ROWS        = 25
@@ -68,6 +73,7 @@ COLS            = 40
 CS_NORMAL       = 0
 CS_DHTOP        = 1
 CS_DHBOT        = 2
+CS_MC           = 3             ; Enhanced lane rows
 
 ; Raster: first text line of row 0 (25 rows, YSCROLL = 3)
 FIRST_TEXT_LINE = 51
@@ -82,3 +88,11 @@ COL_PURPLE      = 4
 COL_GREEN       = 5
 COL_BLUE        = 6
 COL_YELLOW      = 7
+COL_ORANGE      = 8
+COL_BROWN       = 9
+COL_LRED        = 10
+COL_DGREY       = 11
+COL_GREY        = 12
+COL_LGREEN      = 13
+COL_LBLUE       = 14
+COL_LGREY       = 15

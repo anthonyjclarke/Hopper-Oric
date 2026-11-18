@@ -7,7 +7,7 @@
         .exportzp zTick, zIsPAL, zRomIrq, zBlink, zIdleTick
         .exportzp zNow, zDeadline, zWait, zDebt, zLastPresent, zT2Dl, zWaitHook
         .exportzp zRow, zInk, zPaper, zMode, zRowBg, zComplex, zRowDH, zFg, zBg, zGlyph
-        .exportzp zRR, zNeedRefresh, zLastKey, zJoyIdle, zEnhanced
+        .exportzp zRR, zNeedRefresh, zLastKey, zJoyIdle, zEnhanced, zMcPlay
 
         .segment "ZEROPAGE"
 zTmp0:          .res 1
@@ -44,4 +44,5 @@ zNeedRefresh:   .res 1          ; a row turned double height
 zLastKey:       .res 1          ; ScanRomKey edge detection
 zJoyIdle:       .res 1
 zEnhanced:      .res 1          ; version: 0 = Classic, $FF = Enhanced (docs/enhanced.md)
+zMcPlay:        .res 1          ; $FF: Enhanced on the play screen (multicolour lanes), else 0
 

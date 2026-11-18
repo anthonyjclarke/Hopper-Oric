@@ -2,7 +2,5 @@
 retroFont
 DOCS_PYTHON
 # Planned names in docs/enhanced_platform.md (not in the source yet): remove each one once it exists.
-SetTurtleFrameC64
-SetFrogGfxC64
 UpdateSprites
 rowSpace

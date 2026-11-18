@@ -18,7 +18,7 @@ OUT = os.path.join(ROOT, 'docs', 'images', 'screens')
 
 
 def main():
-    for prg in (c64_screens.PRG, c64_screens.MAIN_PRG):
+    for prg in (c64_screens.PRG, c64_screens.ENH_PRG, c64_screens.MAIN_PRG):
         if not os.path.exists(prg):
             sys.exit('%s not found: run make c64-smoke' % os.path.relpath(prg, ROOT))
     os.makedirs(OUT, exist_ok=True)

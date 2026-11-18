@@ -19,7 +19,7 @@
         .include "c64.inc"
 
         .import Present, ParseNextRow, ScanRomKey, ServiceTimer, CheckMenuKeys
-        .import rowPaper, rowCset
+        .import rowPaper, rowCset, rowMc1, rowMc2
         .export InitTiming, ReadClock, WaitCycles, DelayXC64, FrameDelayC64, T2Check, Idle, IdleParse
         .export AttractWait
 .ifdef AUTOTEST
@@ -454,7 +454,28 @@ IrqHandler:
         sta     VIC_BG0
         sty     VIC_MEMSETUP
         ldx     evIdx
-        inx
+        lda     zMcPlay                 ; Enhanced play: multicolour shade
+        beq     :+                      ; and highlight (only multicolour
+        lda     rowMc1,x                ; cells use them; skipped otherwise)
+        sta     VIC_BG1
+        lda     rowMc2,x
+        sta     VIC_BG2
+        lda     rowCset,x               ; V6: a road marking at the top of
+        cmp     #CS_MC                  ; this lane row (not over the
+        bne     :+                      ; sheet-start signs): one raster
+        lda     MarkRow,x               ; line of grey
+        beq     :+
+        ldy     #MARK_LEAD              ; into the right border first
+@lead:  dey
+        bne     @lead
+        lda     #MARK_COLOUR
+        sta     VIC_BG0
+        ldy     #MARK_WAIT              ; 9 + 5 * 11 = 64 cycles: the line
+@mark:  dey                             ; (63 PAL, 65 NTSC). The first line
+        bne     @mark                   ; of a row is a badline, so both
+        lda     rowPaper,x              ; stores land in the border
+        sta     VIC_BG0
+:       inx
         cpx     #C64_ROWS
         bcc     :+
         ldx     #0
@@ -477,6 +498,14 @@ IrqHandler:
         ldy     rowCset
         lda     D018Table,y
         sta     VIC_MEMSETUP
+        lda     rowMc1
+        sta     VIC_BG1
+        lda     rowMc2
+        sta     VIC_BG2
+        lda     zMcPlay                 ; Enhanced play: multicolour text mode
+        and     #$10                    ; (cells with colour RAM below 8 stay hires)
+        ora     #$08
+        sta     VIC_CTRL2
         inc     zTick
         dec     blinkCount
         bne     :+
@@ -532,7 +561,17 @@ NmiEntry:
 
         .segment "RODATA"
 D018Table:
-        .byte   D018_NORMAL, D018_DHTOP, D018_DHBOT
+        .byte   D018_NORMAL, D018_DHTOP, D018_DHBOT, D018_MC
+
+; Enhanced play (V6): the C64 rows that start with a road marking, where the
+; port hides Oric rows 19 and 22 (MapGame): above Oric rows 20 and 23.
+MARK_COLOUR     = COL_GREY
+MARK_WAIT       = 11
+MARK_LEAD       = 5             ; ~25 cycles: the grey store lands in the border
+MarkRow:
+        .repeat C64_ROWS, r
+        .byte   (r = 18) .or (r = 20)
+        .endrepeat
 
 ; Raster line of each row's IRQ: the last line of the row above (row 0's is
 ; the bottom-border frame IRQ).

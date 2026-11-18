@@ -12,7 +12,7 @@
         .importzp zTick, zIsPAL, zRomIrq, zBlink, zIdleTick
         .importzp zNow, zDeadline, zWait, zDebt, zLastPresent, zT2Dl, zWaitHook
         .importzp zRow, zInk, zPaper, zMode, zRowBg, zComplex, zRowDH, zFg, zBg, zGlyph
-        .importzp zRR, zNeedRefresh, zLastKey, zJoyIdle, zEnhanced
+        .importzp zRR, zNeedRefresh, zLastKey, zJoyIdle, zEnhanced, zMcPlay
 
 ; --- what WaitCycles calls while it waits (zWaitHook)
 HOOK_NONE       = 0

@@ -57,7 +57,8 @@ regenerates it whenever a source changes. `just docs-graphics` and `just docs-sc
 - **Screenshots.** `capture_screens.py` runs the captures listed in `tools/c64_screens.py`: each boots the scripted test
   build (`c64/src/autotest.s` presses the keys) in a fresh headless `x64sc` with default settings, warp, no sound and
   VICE's random autostart delay off, and saves the screen after a fixed number of CPU cycles, so the captures repeat
-  exactly. The start-up picture is captured from the normal build, since the test build skips it.
+  exactly. The start-up picture is captured from the normal build, since the test build skips it, and the `enh-*`
+  captures from a second test build that leaves the game in Enhanced (`-D AUTOTEST_ENHANCED`).
 - **Oric figures.** `render_graphics.py` reads the program from `original/HOPPER.TAP` and finds every table by its label
   in `build/hopper.lbl`. It draws glyphs 6 pixels wide, as the Oric does. The Oric screens are drawn by the game's own
   routines running on `tools/cpu6502.py` (`tools/oric_screens.py`, with the waits stubbed out) and rendered with the

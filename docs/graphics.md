@@ -84,6 +84,8 @@ two middle pixel columns (`W6`).
 | [credits-done.png](images/screens/credits-done.png) | The credits, with the redefined key names |
 | [hiscores.png](images/screens/hiscores.png)         | The hi-score table, Enhanced chosen       |
 | [version.png](images/screens/version.png)           | The same after F1: Classic chosen         |
+| [enh-play.png](images/screens/enh-play.png)         | Play in Enhanced: multicolour lanes       |
+| [enh-hops.png](images/screens/enh-hops.png)         | The death flash in Enhanced               |
 | [sheet-start.png](images/screens/sheet-start.png)   | The sheet-start signs                     |
 | [play.png](images/screens/play.png)                 | Play                                      |
 | [hops.png](images/screens/hops.png)                 | The death flash                           |

@@ -7,19 +7,20 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 
 ## Modules
 
-| File                | Holds                                                         |
-|:--------------------|:--------------------------------------------------------------|
-| `basic_stub.s`      | `SYS 2061` and a `jmp Start`                                  |
-| `hopper.s`          | The game, patched in place (segment `GAME`, run at `$0500`)   |
-| `platform.s`        | `Start` and the hooks the patched game calls                  |
-| `zp.s`              | The platform's zero page, `$60`–`$8F`                         |
-| `timing.s`          | The CIA clock, the waits, the raster interrupt                |
-| `video.s`           | Showing the Oric screen on the VIC-II                         |
-| `input.s`           | Keyboard, joystick, the ROM key buffer, redefining keys       |
-| `sound.s`           | The AY on the SID                                             |
-| `intro.s`           | The start-up picture                                          |
-| `autotest.s`        | Scripted keys for the headless test build only                |
-| `hw.inc`, `c64.inc` | C64 registers, the layout constants, hooks, row maps, timings |
+| File                | Holds                                                                |
+|:--------------------|:---------------------------------------------------------------------|
+| `basic_stub.s`      | `SYS 2061` and a `jmp Start`                                         |
+| `hopper.s`          | The game, patched in place (segment `GAME`, run at `$0500`)          |
+| `platform.s`        | `Start` and the hooks the patched game calls                         |
+| `zp.s`              | The platform's zero page, `$60`–`$8F`                                |
+| `timing.s`          | The CIA clock, the waits, the raster interrupt                       |
+| `video.s`           | Showing the Oric screen on the VIC-II                                |
+| `input.s`           | Keyboard, joystick, the ROM key buffer, redefining keys              |
+| `sound.s`           | The AY on the SID                                                    |
+| `intro.s`           | The start-up picture                                                 |
+| `enhanced.s`        | The C64 Enhanced look ([enhanced_platform.md](enhanced_platform.md)) |
+| `autotest.s`        | Scripted keys for the headless test build only                       |
+| `hw.inc`, `c64.inc` | C64 registers, the layout constants, hooks, row maps, timings        |
 
 ---
 
@@ -29,20 +30,20 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 `$0500`, clears the BSS, puts an `RTI` at `NMI_VECTOR`, unpacks the start-up picture and shows it (`UnpackPicture`,
 `ShowPicture`), then runs `InitVideo`, `InitInput`, `InitSound` and `InitTiming` and jumps to `ColdStart`.
 
-| Hook              | Patched in at            | Does                                                                          |
-|:------------------|:-------------------------|:------------------------------------------------------------------------------|
-| `InitGameC64`     | `$1001` (`NewGame`)      | ROM interrupt off, the game row map, then `InitGame`                          |
-| `RomIrqOn`        | `$20A0` (`InitTimers`)   | The ROM interrupt's jobs back on                                              |
-| `ReadRomKey`      | the key waits            | Draw now and then (`Idle`), then `lda ROM_KEY`                                |
-| `ReadMenuKey`     | `$2F61` (`ControlsMenu`) | The same, parsing rows between draws (`IdleParse`)                            |
-| `SoundMenuC64`    | `$0550`                  | The menu row map, then `SoundMenu`                                            |
-| `CreditsIntroC64` | `$2953`                  | The credits row map, then `CreditsIntro`                                      |
-| `HiscoreTableC64` | `$2971`, `$1B51`         | The hi-score row map, the title timer, then `DrawHiScoreTable`                |
-| `TitleTickC64`    | `$2938` (`TitleScroll`)  | `CheckMenuKeys`; after `TITLE_STEPS` steps the picture, then the attract loop |
-| `VersionKeys`     | from `TitleTickC64`      | F1 or joystick left/right: flip `zEnhanced`, restart the timer                |
-| `DrawVersionLine` | from `TitleTickC64`      | The version line, row 25 of the hi-score screen ([enhanced.md](enhanced.md))  |
-| `EraseFlyC64`     | `$2A1B` (`EraseFly`)     | Erase the fly; with no fly, write to `tmp0` / `key_state`, not the 6510 port  |
-| `RedefineKeys`    | `$2F91` (`ControlsMenu`) | Choice 2: ask for the four keys                                               |
+| Hook              | Patched in at            | Does                                                                              |
+|:------------------|:-------------------------|:----------------------------------------------------------------------------------|
+| `InitGameC64`     | `$1001` (`NewGame`)      | ROM interrupt off, the game row map, then `InitGame`                              |
+| `RomIrqOn`        | `$20A0` (`InitTimers`)   | The ROM interrupt's jobs back on                                                  |
+| `ReadRomKey`      | the key waits            | Draw now and then (`Idle`), then `lda ROM_KEY`; F1 is held back for `VersionKeys` |
+| `ReadMenuKey`     | `$2F61` (`ControlsMenu`) | The same, parsing rows between draws (`IdleParse`)                                |
+| `SoundMenuC64`    | `$0550`                  | The menu row map, then `SoundMenu`                                                |
+| `CreditsIntroC64` | `$2953`                  | The credits row map, then `CreditsIntro`                                          |
+| `HiscoreTableC64` | `$2971`, `$1B51`         | The hi-score row map, the title timer, then `DrawHiScoreTable`                    |
+| `TitleTickC64`    | `$2938` (`TitleScroll`)  | `CheckMenuKeys`; after `TITLE_STEPS` steps the picture, then the attract loop     |
+| `VersionKeys`     | from `TitleTickC64`      | F1 or joystick left/right: flip `zEnhanced`, restart the timer                    |
+| `DrawVersionLine` | from `TitleTickC64`      | The version line, row 25 of the hi-score screen ([enhanced.md](enhanced.md))      |
+| `EraseFlyC64`     | `$2A1B` (`EraseFly`)     | Erase the fly; with no fly, write to `tmp0` / `key_state`, not the 6510 port      |
+| `RedefineKeys`    | `$2F91` (`ControlsMenu`) | Choice 2: ask for the four keys                                                   |
 
 ---
 

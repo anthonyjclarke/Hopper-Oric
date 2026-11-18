@@ -24,46 +24,64 @@ the road markings between the car lanes.
 
 ## V1 – Multicolour Lane Graphics
 
-**What changes.** Logs, turtles, trucks, cars and the hedge keep their shapes but gain a shade and a highlight. Each
-lane keeps the ink the original gives it, and the shade and highlight are chosen from the same colour family.
+**Built** (`c64/src/enhanced.s`), checked in VICE. Logs, turtles, trucks, cars and the hedge keep their shapes but gain
+a shade and a highlight. Each lane keeps the ink the original gives it.
 
-![Each lane as the port draws it, beside its multicolour version and the three colours it uses](images/enhanced/lanes.png)
+![VICE: Enhanced play, multicolour lanes](images/screens/enh-play.png)
 
-**How the graphics are made.** A tool converts each original glyph, as the port draws it (6 pixels widened to 8), into
-multicolour, where pixels go in pairs. A pair with both pixels set takes the lane's ink. A pair with one pixel set takes
-the shade. The topmost full pair in each pixel column of a lane's top row takes the highlight, so the top outline of a
-log or car catches the light and the grain inside it doesn't. The tool's output is the starting point. Each shape then
-gets a hand touch-up, and the hedge is redrawn as leaves instead of the original dither pattern, which turns into
-stripes in multicolour.
+![The same moment in Classic](images/screens/play.png)
+
+**How the graphics are made.** At the start of each Enhanced game the platform converts the game's own glyphs, as the
+port draws them (6 pixels widened to 8), into a second character set at `CHARSET_MC` (`$8800`). Multicolour pixels go in
+pairs. A pair with both pixels set takes the cell's colour RAM, which is the lane's ink. A pair with one pixel set takes
+`$D022`, the shade. In the top row of characters of each lane, the topmost full pair in each pixel column takes `$D023`,
+the highlight, so the top outline of a log or car catches the light and the grain inside it doesn't. The hedge
+(character `$7F`) is the one drawn glyph: the original's dither pattern turns into stripes in multicolour, so it becomes
+a leaf pattern. The conversion runs on the C64 (`McBuild`, `McChar`, about 30,000 cycles once per game), so there is no
+generated data to keep in step with the game.
+
+![The lanes as the port draws them, beside the multicolour version and the three colours each uses (mock-up tool)](images/enhanced/lanes.png)
 
 | Lane (rows)          | Ink (colour RAM) | Shade (`$D022`) | Highlight (`$D023`) |
 |:---------------------|:-----------------|:----------------|:--------------------|
 | Hedge (0–2)          | green            | light green     | brown               |
-| Logs, black (4–5)    | brown            | black           | orange              |
+| Logs, black (4–5)    | black            | brown           | orange              |
 | Turtles (7–8)        | red              | brown           | light red           |
 | Logs, yellow (10–11) | yellow           | orange          | white               |
 | Logs, red (13–14)    | red              | brown           | light red           |
-| Trucks (17–18)       | cyan             | light blue      | white               |
-| Cars, blue (20–21)   | blue             | light blue      | white               |
-| Cars, yellow (23–24) | yellow           | orange          | white               |
+| Trucks (17–18)       | cyan             | grey            | white               |
+| Cars, blue (20–21)   | blue             | grey            | white               |
+| Cars, yellow (23–24) | yellow           | grey            | white               |
 
-The black logs are the exception to "same ink": a black log on a dark blue river is barely visible, and in multicolour
-the ink must be one of colours 0–7. They become brown with black grain.
+The colours are `LaneShade` and `LaneLight` in `enhanced.s`, per Oric row. A multicolour cell's colour RAM can only take
+colours 0–7, which are exactly the Oric's eight inks, so every lane keeps its own ink. The black logs therefore stay
+black and get brown grain (an earlier plan made them brown, which colour RAM can't show). All three road lanes share
+grey and white, so the raster interrupt's writes never change colours between two vehicles' rows.
 
-**How it is shown.** In multicolour text mode a cell is multicolour only if its colour RAM value is 8 or more, and then
-its colour is that value minus 8. So the eight colours a multicolour cell can take are exactly the Oric's eight inks,
-and every lane keeps its ink. Text rows keep colour RAM below 8 and stay hires, so multicolour mode can stay on for the
-whole screen. Lane rows are simple rows (attributes only in columns 0–1), so `FastRow` sets the multicolour bit for the
-whole row. The shade and highlight differ per lane, and the raster interrupt already writes `$D021` and `$D018` at the
-end of every row, so it writes `$D022` and `$D023` too.
+**How it is shown.** In multicolour text mode a cell is multicolour only if its colour RAM is 8 or more. Text rows keep
+colour RAM below 8 and stay hires, so while an Enhanced game is on (`zMcPlay`) the frame interrupt sets multicolour mode
+for the whole screen. Lane rows are simple rows (attributes only in columns 0–1): when `FastRow` colours one, or
+`ParseRow` finds one simple, `McRowSetup` gives it the ink + 8, the multicolour character set (`CS_MC`) and the lane's
+shade and highlight (`rowMc1`, `rowMc2`). The raster interrupt already sets `$D021` and `$D018` at the end of each row,
+and now sets `$D022` and `$D023` too.
 
-The multicolour glyphs go in their own 2 KB character set at `$8800`. The game changes two sets of glyphs while it runs:
-`SetTurtleFrame` copies one of seven turtle frames, and `SetFrogGfx` copies the frog facing its new direction. A `jsr`
-hook in each copies the matching multicolour frame into the second set
-([enhanced_platform.md](enhanced_platform.md#hooks)).
+**Keeping up with the game.** The game rewrites three groups of glyphs while it plays. The platform converts them again
+when they change, so no game byte is patched. The two hooks the plan expected aren't needed:
 
-**Watch for.** The death flash and other cells the port shows as inverse (characters 128–255) have no meaning in
-multicolour. During the flash, a lane row falls back to hires.
+| Glyphs                 | Rewritten by                         | Noticed by                          |
+|:-----------------------|:-------------------------------------|:------------------------------------|
+| Turtles `$6E`–`$73`    | `SetTurtleFrame`                     | `turtle_frame` changing             |
+| Frog `$3A`–`$3D`       | `SetFrogGfx`, the splat, a home frog | Its 32 bytes, compared every pass   |
+| Home frogs `$2B`–`$2F` | `DrawHomeFrog`                       | Compared every 8th pass             |
+| Everything else        | `InitGame`                           | Sentinel glyphs `$21`, `$61`, `$75` |
+
+`McDynamic` does this from `Present` and costs about 600 cycles a pass when nothing changed. The sentinels are there
+because the set is first built when the play screen's row map is set, before `InitGame` copies the game's graphics in.
+
+**The death flash** changes the papers in columns 0–1, so the lanes stay multicolour through it, on white or black
+paper.
+
+![VICE: the death flash in Enhanced](images/screens/enh-hops.png)
 
 ---
 
@@ -117,12 +135,14 @@ translation costs about 4,000 cycles a frame, inside the time the Oric spent wai
 
 ## V6 – Road Markings
 
-**What changes.** The Oric drew dashed lines between the car lanes on rows 19 and 22. The port hides those rows to fit
-28 rows on 25, so the three car lanes sit together. Enhanced draws a one-pixel grey line at each boundary instead,
-without spending a row.
+**Built**, checked in VICE. The Oric drew dashed lines between the car lanes on rows 19 and 22. The port hides those
+rows to fit 28 rows on 25, so the three car lanes sit together. Enhanced draws a one-pixel grey line at each boundary
+instead, without spending a row. It is solid, not dashed: a raster colour change covers the whole line.
 
-**How it is shown.** The raster interrupt changes `$D021` to grey for one raster line at the top of rows 20 and 23 and
-back to black. Only the background takes the colour, so a car passing over the line hides it, as a car would.
+**How it is shown.** The row interrupts for Oric rows 20 and 23 turn `$D021` grey for one raster line and back
+([enhanced_platform.md](enhanced_platform.md#raster-interrupt)). Only the background takes the colour, so a car passing
+over the line hides it, as a car would. The lines are drawn only while those rows show lanes, so the sheet-start signs,
+which use the same rows, are left alone. The `enh-play` capture under V1 shows them.
 
 ---
 

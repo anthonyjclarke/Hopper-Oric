@@ -6,16 +6,18 @@ uses the C64 hardware the port leaves idle: sprites, multicolour characters, the
 the SID's filter and envelopes, and about 16 KB of free memory. The player chooses **Classic** or **Enhanced** on the
 home screen and can switch back and forth between games.
 
-**Status.** The version switch (V0) is built and checked in VICE: its pictures below are captures. Everything else is
-planned, and its pictures are mock-ups drawn by `docs/tools/render_enhanced.py` from the real game screens ([How the
-Mock-Ups Are Made](#how-the-mock-ups-are-made)). Memory and cycle figures for the planned changes are estimates. Until
-V1 and the rest are built, Enhanced looks the same as Classic. This chapter is the overview and the version switch;
+**Status.** Built and checked in VICE: the version switch (V0), the multicolour lanes (V1) and the road markings (V6);
+their pictures are VICE captures. Everything else is planned, and its pictures are mock-ups drawn by
+`docs/tools/render_enhanced.py` from the real game screens ([How the Mock-Ups Are Made](#how-the-mock-ups-are-made)).
+Memory and cycle figures for the planned changes are estimates. This chapter is the overview and the version switch;
 [enhanced_graphics.md](enhanced_graphics.md), [enhanced_sound.md](enhanced_sound.md) and
 [enhanced_platform.md](enhanced_platform.md) describe each change in full.
 
-![The playfield as the port shows it today (Classic)](images/enhanced/play-classic.png)
+![VICE: Classic play](images/screens/play.png)
 
-![The same moment in Enhanced: every graphics option on](images/enhanced/play-enhanced.png)
+![VICE: Enhanced play as built so far (V1 multicolour lanes, V6 road markings)](images/screens/enh-play.png)
+
+![Mock-up: Enhanced with every planned graphics change](images/enhanced/play-enhanced.png)
 
 ---
 
@@ -23,18 +25,19 @@ V1 and the rest are built, Enhanced looks the same as Classic. This chapter is t
 
 **The game logic is untouched.** Every game byte stays the Oric's, at its Oric address, as in the port. The enhancements
 live in the platform layer (`c64/src/`) and only read the game's state: `frog_row`, `frog_col`, `fly_on`, `fly_ptr`,
-`turtle_frame` and the Oric screen at `$BB80`. Two small hooks copy graphics when the game changes its own glyphs
-([enhanced_platform.md](enhanced_platform.md#hooks)). They change nothing the game reads.
+`turtle_frame` and the Oric screen at `$BB80`. So far no game byte is patched for Enhanced: even the glyphs the game
+rewrites while it plays are noticed by the platform ([enhanced_platform.md](enhanced_platform.md#hooks)).
 
 **Pixels, not cells.** The game draws by writing character codes and tests collisions by reading them back
 ([architecture.md](architecture.md)). Enhanced changes only how those codes look on screen, so what the player sees can
 never disagree with what the game tests. A sprite frog still has the frog's characters underneath it, and a textured
 river is still spaces.
 
-**Classic is today's port.** In Classic the C64 draws exactly what the current build draws. Classic `make c64-smoke`
-captures must match today's captures. `make verify` is not affected, because `src/hopper.s` never changes. Any change to
-`c64/src/hopper.s` is marked `; C64: (Enhanced)`, and gameplay changes stay in the C64 Remix ([remix.md](remix.md)):
-Enhanced adds none.
+**Classic is today's port.** In Classic the C64 draws exactly what the port draws: every Enhanced cost sits behind a
+flag, so Classic runs the same code paths, give or take a few cycles. Those cycles can move a capture by a frame, so
+Classic captures are checked by eye against the last build rather than byte for byte. `make verify` is not affected,
+because `src/hopper.s` never changes. Any change to `c64/src/hopper.s` is marked `; C64: (Enhanced)`, and gameplay
+changes stay in the C64 Remix ([remix.md](remix.md)): Enhanced adds none.
 
 **Subtle.** Each change keeps the original's shapes, colours and layout as its starting point. Logs keep their lane
 colours, the frog keeps its drawing, and the screens keep their text where the game prints it.
@@ -43,29 +46,29 @@ colours, the frog keeps its drawing, and the screens keep their text where the g
 
 ## Summary of Changes
 
-| ID | Change                        | Kind      | Tier     | Chapter                                      |
-|:---|:------------------------------|:----------|:---------|:---------------------------------------------|
-| V0 | Version switch on home screen | Front end | Polish   | [The Version Switch](#the-version-switch)    |
-| V1 | Multicolour lane graphics     | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) |
-| V6 | Road markings as raster lines | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) |
-| V7 | Oric-style font               | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) |
-| S1 | SID voicing of the AY tunes   | Sound     | Polish   | [enhanced_sound.md](enhanced_sound.md)       |
-| V2 | Sprite frog with hop arc      | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) |
-| V3 | Fly sprite                    | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) |
-| V5 | Water and grass texture       | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) |
-| F1 | Enhanced attract screen       | Front end | Showcase | [enhanced_graphics.md](enhanced_graphics.md) |
-| S2 | SID sound effects             | Sound     | Showcase | [enhanced_sound.md](enhanced_sound.md)       |
-| V4 | Smooth-scrolling lanes        | Graphics  | Stretch  | [enhanced_graphics.md](enhanced_graphics.md) |
-| F2 | Hi-scores saved to disk       | Front end | Stretch  | [enhanced_platform.md](enhanced_platform.md) |
-| S3 | Title tune                    | Sound     | Stretch  | [enhanced_sound.md](enhanced_sound.md)       |
+| ID | Change                        | Kind      | Tier     | Chapter                                      | Status  |
+|:---|:------------------------------|:----------|:---------|:---------------------------------------------|:--------|
+| V0 | Version switch on home screen | Front end | Polish   | [The Version Switch](#the-version-switch)    | Built   |
+| V1 | Multicolour lane graphics     | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
+| V6 | Road markings as raster lines | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
+| V7 | Oric-style font               | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| S1 | SID voicing of the AY tunes   | Sound     | Polish   | [enhanced_sound.md](enhanced_sound.md)       | Planned |
+| V2 | Sprite frog with hop arc      | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| V3 | Fly sprite                    | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| V5 | Water and grass texture       | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| F1 | Enhanced attract screen       | Front end | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| S2 | SID sound effects             | Sound     | Showcase | [enhanced_sound.md](enhanced_sound.md)       | Planned |
+| V4 | Smooth-scrolling lanes        | Graphics  | Stretch  | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| F2 | Hi-scores saved to disk       | Front end | Stretch  | [enhanced_platform.md](enhanced_platform.md) | Planned |
+| S3 | Title tune                    | Sound     | Stretch  | [enhanced_sound.md](enhanced_sound.md)       | Planned |
 
-**Polish** is low risk, gives the biggest change in a still screenshot, and needs only the two copy hooks. **Showcase**
-uses sprites and the spare frame time and shows best in motion. Each **Stretch** item is self-contained and can be
-dropped.
+**Polish** is low risk and gives the biggest change in a still screenshot; V1 turned out to need no game hooks.
+**Showcase** uses sprites and the spare frame time and shows best in motion. Each **Stretch** item is self-contained and
+can be dropped.
 
 | Tier     | Memory (estimate) | Game bytes changed |
 |:---------|:------------------|:-------------------|
-| Polish   | 3.4 KB            | Two `jsr` hooks    |
+| Polish   | 3.4 KB            | None               |
 | Showcase | 2.9 KB            | None               |
 | Stretch  | 3.2 KB            | None               |
 

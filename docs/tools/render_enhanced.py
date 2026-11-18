@@ -40,13 +40,13 @@ LANE_DIR = [-1, 1, -1, 1, -1, 1, -1]
 LANE_FRAMES = [11, 5, 7, 5, 7, 13, 6]
 
 # V1: multicolour colours per row: (full = colour RAM 0-7, half = $D022, edge = $D023).
-MC_ROW = {4: (BROWN, BLACK, ORANGE), 5: (BROWN, BLACK, ORANGE),
-          7: (RED, BROWN, LRED), 8: (RED, BROWN, LRED),
+MC_ROW = {4: (BLACK, BROWN, ORANGE), 5: (BLACK, BROWN, ORANGE),       # as built: LaneShade / LaneLight in
+          7: (RED, BROWN, LRED), 8: (RED, BROWN, LRED),                 # c64/src/enhanced.s
           10: (YELLOW, ORANGE, WHITE), 11: (YELLOW, ORANGE, WHITE),
           13: (RED, BROWN, LRED), 14: (RED, BROWN, LRED),
-          17: (CYAN, LBLUE, WHITE), 18: (CYAN, LBLUE, WHITE),
-          20: (BLUE, LBLUE, WHITE), 21: (BLUE, LBLUE, WHITE),
-          23: (YELLOW, ORANGE, WHITE), 24: (YELLOW, ORANGE, WHITE)}
+          17: (CYAN, GREY, WHITE), 18: (CYAN, GREY, WHITE),
+          20: (BLUE, GREY, WHITE), 21: (BLUE, GREY, WHITE),
+          23: (YELLOW, GREY, WHITE), 24: (YELLOW, GREY, WHITE)}
 LANE_TOPS = {4, 7, 10, 13, 17, 20, 23}                         # first row of each lane: the only one with edges
 LANE_NAMES = {4: 'Logs (black)', 7: 'Turtles', 10: 'Logs (yellow)', 13: 'Logs (red)', 17: 'Trucks',
               20: 'Cars (blue)', 23: 'Cars (yellow)'}

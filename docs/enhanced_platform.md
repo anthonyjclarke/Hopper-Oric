@@ -1,10 +1,10 @@
 # Hopper – Enhanced Platform Layer
 
 How the C64 Enhanced version ([enhanced.md](enhanced.md)) fits into the platform layer
-([platform_layer.md](platform_layer.md)): the version flag, the two hooks into the game, the changes to the raster
-interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. Only the version flag is
-built so far; the rest is the plan. Names in this chapter that don't exist in `c64/src/` yet are listed under [Planned
-Names](#planned-names).
+([platform_layer.md](platform_layer.md)): the version flag, hooks into the game (none so far), the changes to the raster
+interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. The version flag (V0) and
+the multicolour lanes (V1) are built, in `c64/src/platform.s` and `c64/src/enhanced.s`; the rest is the plan. Names in
+this chapter that don't exist in `c64/src/` yet are listed under [Planned Names](#planned-names).
 
 ---
 
@@ -23,7 +23,11 @@ the switch:
    `HiscoreTableC64`, because the name entry screen also draws the table, and doesn't show the line.
 2. Before `CheckMenuKeys`, `VersionKeys` looks for F1 or a new push of the joystick left or right. `ScanRomKey` reports
    F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like any other key, so a held F1 flips once. The joystick is
-   edge-detected in `joyLR`.
+   edge-detected in `joyLR`. `CheckMenuKeys` draws a frame (`ReadRomKey` calls `Idle`) before it reads the key, and
+   drops any key it doesn't know, so an F1 arriving during that frame would be lost. `ReadRomKey` therefore takes F1 out
+   of `ROM_KEY` into `versionReq`, which `VersionKeys` checks first, and `HiscoreTableC64` clears it so an F1 from
+   another screen doesn't count. `ReadRomKey` reloads `ROM_KEY` before it returns: the game's key waits branch on its
+   flags.
 3. On a flip it inverts `zEnhanced`, sets `titleSteps` back to 1, so the 15-second attract timer starts again, and falls
    into `DrawVersionLine`.
 
@@ -40,54 +44,56 @@ both states. The game it then starts is in Classic.
 
 ## Hooks
 
-Enhanced needs two changes to the game's bytes, both in routines that copy glyphs into `CHARSET` while the game runs. In
-each, the routine's final `rts` (or the `nop`s before it) becomes a `jmp` to platform code that copies the matching
-multicolour glyphs into the second character set and returns. Both are marked `; C64: (Enhanced)`.
+**None so far.** The plan expected two hooks, in `SetTurtleFrame` and `SetFrogGfx`, so that the multicolour set could
+follow the glyphs the game rewrites. The frog turned out to be rewritten in six places (four directions, the splat and
+the frog in a home), with no spare bytes in most of them. So the platform notices the changes itself instead, in
+`McDynamic` ([enhanced_graphics.md](enhanced_graphics.md#v1--multicolour-lane-graphics)), and `make c64-diff` shows no
+game bytes added for Enhanced.
 
-| Hook                | In                         | Copies                                              |
-|:--------------------|:---------------------------|:----------------------------------------------------|
-| `SetTurtleFrameC64` | `SetTurtleFrame` (`$1800`) | The multicolour turtle frame for `turtle_frame`     |
-| `SetFrogGfxC64`     | `SetFrogGfx` (`$0F20`)     | Blank frog glyphs, and the direction for the sprite |
-
-`SetTurtleFrame` has three spare `nop`s before each of its `rts` (`$1810`, `$1826`, ...), enough for a `jmp`. Both hooks
-do nothing when `zEnhanced` is clear. `make c64-diff` lists them.
-
-Everything else reads the game's state without changing the game: `frog_row`, `frog_col`, `fly_on`, `fly_ptr`,
-`lane_speeds`, the Oric screen and the AY register copy.
+Everything reads the game's state without changing the game: `turtle_frame`, the glyphs at `CHARSET`, the Oric screen,
+and later `frog_row`, `frog_col`, `fly_on`, `fly_ptr`, `lane_speeds` and the AY register copy.
 
 ---
 
 ## Raster Interrupt
 
-The interrupt already runs at the last line of each text row and sets `$D021` and `$D018` for the next row
-([platform_layer.md](platform_layer.md#timing)). Enhanced adds, per row, when `zEnhanced` is set:
+The interrupt runs at the last line of each text row and sets `$D021` and `$D018` for the next row
+([platform_layer.md](platform_layer.md#timing)). **Built (V1):** while `zMcPlay` is set, it also writes `$D022` and
+`$D023` from `rowMc1` and `rowMc2`, after the two existing stores, and the frame interrupt sets `$D016` bit 4
+(multicolour) for the whole screen. `D018Table` gains `D018_MC` for `CS_MC`. VICE shows no seam at row boundaries: the
+new stores land before the next row's first pixel line.
 
-| Register | Per row from     | For                                         |
-|:---------|:-----------------|:--------------------------------------------|
-| `$D018`  | `rowCset`        | The multicolour set at `$8800` on play rows |
-| `$D022`  | lane table       | V1 shade                                    |
-| `$D023`  | lane table       | V1 highlight                                |
-| `$D016`  | lane fine scroll | V4, and the F1 scroller                     |
+`zMcPlay` is `$FF` only while Enhanced is chosen and the play screen's row map is set (`SetRowMap`). On every other
+screen, and in Classic, the interrupt skips the writes (about 5 cycles a row), so menus, credits and the attract loop
+run at Classic speed in both versions. That matters because the credits' short waits already overrun, and any extra cost
+there moves the whole attract loop.
 
-and two one-line interrupts at the top of play rows 20 and 23 for the road markings (V6). Multicolour mode (`$D016` bit
-4) is set for the whole screen in Enhanced. Cells with colour RAM below 8 stay hires, so text is unaffected.
+**Built (V6):** the road markings need no extra interrupts. In the interrupts for C64 rows 18 and 20 (`MarkRow`, Oric
+rows 20 and 23, below the hidden rows 19 and 22), when that row shows multicolour lanes (`rowCset` = `CS_MC`, so not the
+sheet-start signs), the handler waits about 25 cycles, sets `$D021` to grey, waits 64 cycles and sets the row's paper
+back. The first line of a text row is a badline, so both stores land in the side border and exactly one raster line
+turns grey, on PAL (63 cycles a line) and NTSC (65). Without the 25-cycle lead the first store landed mid-line and left
+an 8-pixel grey dash on the line above. About 100 cycles a frame.
 
-The extra stores cost about 20 cycles a row. They must land before the beam reaches the next row's first character, as
-the existing two do.
+Still planned: per-row `$D016` fine scroll (V4, the F1 scroller).
 
 ---
 
 ## Present and FastRow
 
-| Change                 | Where     | Does                                                                      |
-|:-----------------------|:----------|:--------------------------------------------------------------------------|
-| Multicolour lane rows  | `FastRow` | Colour RAM = ink + 8 for the whole row on lane rows                       |
-| Space translation (V5) | `Present` | `$20` to the row's texture character (`rowSpace`) on river and verge rows |
-| Death flash            | `FastRow` | Lane rows fall back to hires (ink below 8) while the flash shows          |
+| Change                        | Where                 | Does                                                      |
+|:------------------------------|:----------------------|:----------------------------------------------------------|
+| Multicolour lane rows (built) | `FastRow`, `McSimple` | `McRowSetup`: colour RAM = ink + 8, `CS_MC`, lane colours |
+| Glyph tracking (built)        | `Present`             | `McDynamic`: build or update the multicolour set          |
+| Space translation (V5)        | `Present`             | `$20` to the row's texture character (`rowSpace`)         |
 
-The translation adds a table lookup per copied cell on the textured rows, about 4,000 cycles a frame. `Present` costs
-about 10,000 today, in a game frame of about 30,000 that the Oric mostly spent waiting
-([porting.md](porting.md#decisions)).
+`ParseRow` calls `McSimple` when it finds a row simple, because after `SetRowMap` every row is parsed once, and a lane
+row that never changes its columns 0–1 would otherwise never reach `FastRow`. Each call sits behind `bit zMcPlay`, so
+Classic pays a few cycles at most.
+
+`McDynamic` costs about 600 cycles a pass and a full build about 30,000 once per game. The translation (V5) would add a
+table lookup per copied cell on the textured rows, about 4,000 cycles a frame. `Present` costs about 10,000, in a game
+frame of about 30,000 that the Oric mostly spent waiting ([porting.md](porting.md#decisions)).
 
 ---
 
@@ -114,17 +120,20 @@ free.
 
 | Region          | Size    | VIC sees it | Use                                 |
 |:----------------|:--------|:------------|:------------------------------------|
-| `$7643`–`$7FFF` | 2,493 B | No          | Enhanced code                       |
+| `$76D9`–`$7C64` | 1,420 B | No          | Used: V0 and V1 code, tables, BSS   |
+| `$7C65`–`$7FFF` | 923 B   | No          | Free                                |
 | `$8400`–`$87FF` | 1,024 B | Yes         | 16 sprite blocks: frog              |
-| `$8800`–`$8FFF` | 2,048 B | Yes         | Multicolour play character set      |
+| `$8800`–`$8FFF` | 2,048 B | Yes         | Used: multicolour play set (V1)     |
 | `$9000`–`$9FFF` | 4,096 B | No          | SID tables, title tune, disk code   |
 | `$B800`–`$B9FF` | 512 B   | Yes         | 8 sprite blocks: splat, splash, fly |
 | `$C800`–`$CFFF` | 2,048 B | Bank 3 only | Spare                               |
 | `$D000`–`$DFFF` | 4,096 B | No          | Spare (RAM under I/O)               |
 | `intro.rle`     | 6,739 B | No          | Spare after `UnpackPicture` has run |
 
-Today's BSS ends at `$7642` (`c64/build/hopper.map`). The full set of changes needs about 9.5 KB, so it fits with the
-packed picture's space still in reserve.
+With V1 the BSS ends at `$7C64` (`c64/build/hopper.map`), leaving under 1 KB below `$8000`. From V2 on, Enhanced code
+and tables go to `$9000`–`$9FFF`: the one-file `.prg` would then also cover `$8000`–`$8FFF`, which is harmless (the VIC
+screen and the multicolour set are written at run time), or `Start` moves them there as it moves the game. The full set
+of changes needs about 9.5 KB, so it still fits with the packed picture's space in reserve.
 
 ---
 
@@ -140,19 +149,21 @@ on. About 0.4 KB.
 
 ## Building and Testing
 
-There is one build, `make c64`, and the `.prg` holds both versions. `make c64-diff` shows the two hooks as the only game
-bytes Enhanced adds.
+There is one build, `make c64`, and the `.prg` holds both versions. `make c64-smoke` builds two scripted test programs
+from the same key script (`c64/src/autotest.s`):
 
-| Check                | How                                                                    |
-|:---------------------|:-----------------------------------------------------------------------|
-| Classic unchanged    | `make c64-smoke` with `zEnhanced` clear: captures match today's        |
-| Enhanced screens     | The same script with F1 pressed on the home screen first               |
-| The switch           | Flip twice: the home screen comes back identical                       |
-| Collisions unchanged | A scripted run hops into water and a car in both versions: same deaths |
-| Sound                | By ear in VICE (headless VICE is silent)                               |
+| Build                      | Script                                          | Captures                            |
+|:---------------------------|:------------------------------------------------|:------------------------------------|
+| `c64/build/test/`          | F1 on the home screen, then play in Classic     | `hiscores`, `version`, `play`…      |
+| `c64/build/test-enhanced/` | `-D AUTOTEST_ENHANCED`: no F1, play in Enhanced | `enh-play`, `enh-hops`, `enh-later` |
 
-`c64/src/autotest.s` gains an F1 press in its key script for the Enhanced run, and `tools/c64_screens.py` gains the
-Enhanced captures for [graphics.md](graphics.md).
+`tools/c64_screens.py` picks the program by the capture's name (`enh-*`). Classic captures are compared by eye with the
+previous build's: the few cycles Enhanced adds to shared paths can move a capture by a frame. Still to check by hand in
+VICE: real F1 and joystick presses, RESTORE, a full sheet in Enhanced, and NTSC.
+
+The key script leaves at least 25 frames between keys, and 80 between the sound menu and the controls menu: keys
+injected at fixed frames are lost if they arrive before the screen that wants them, and the old 15-frame gaps broke as
+soon as the code took a few more cycles. F1 goes in at frame 2500 and the game starts at 2600.
 
 ---
 
@@ -161,11 +172,7 @@ Enhanced captures for [graphics.md](graphics.md).
 Names this section uses that don't exist yet. They are in `docs/tools/doc_names_ignore.txt` until the code exists, and
 are removed from there as each one is written.
 
-| Name                | Kind      | For                                        |
-|:--------------------|:----------|:-------------------------------------------|
-| `zEnhanced`         | Zero page | The version flag                           |
-| `DrawVersionLine`   | Routine   | Row 25 of the home screen                  |
-| `SetTurtleFrameC64` | Hook      | Multicolour turtle frames                  |
-| `SetFrogGfxC64`     | Hook      | Frog glyphs and sprite direction           |
-| `UpdateSprites`     | Routine   | Frog, fly and death sprites, the hop tween |
-| `rowSpace`          | Table     | Texture character for `$20`, per row       |
+| Name            | Kind    | For                                        |
+|:----------------|:--------|:-------------------------------------------|
+| `UpdateSprites` | Routine | Frog, fly and death sprites, the hop tween |
+| `rowSpace`      | Table   | Texture character for `$20`, per row       |

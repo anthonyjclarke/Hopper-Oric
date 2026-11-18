@@ -221,9 +221,18 @@ RomIrqOn:
         rts
 
 ; The four key-wait loops: draw the screen now and then, then lda ROM_KEY.
+; F1 is taken out here and kept for VersionKeys (versionReq): an F1 that
+; arrived while Idle drew would otherwise reach CheckMenuKeys, which drops
+; any key it doesn't know. The game's key waits never see F1.
 ReadRomKey:
         jsr     Idle
         lda     ROM_KEY
+        cmp     #KEY_F1 | $80
+        bne     :+
+        sta     versionReq
+        lda     #0
+        sta     ROM_KEY
+:       lda     ROM_KEY                 ; the callers branch on these flags
         rts
 
 ; The controls menu's key wait: as ReadRomKey, parsing rows in between.
@@ -246,6 +255,7 @@ HiscoreTableC64:
         lda     #0                      ; TitleTickC64 times the table from here
         sta     titleSteps
         sta     titleSteps+1
+        sta     versionReq              ; an F1 from another screen doesn't count
         lda     #MAP_HISCORE
         jsr     SetRowMap
         jmp     DrawHiScoreTable
@@ -292,15 +302,19 @@ TitleTickC64:
 :       jmp     AttractLoop
 
 ;------------------------------------------------------------------------------
-; VersionKeys - on the home screen: F1 (ROM_KEY = KEY_F1) or a new push of
+; VersionKeys - on the home screen: F1 (in ROM_KEY as KEY_F1, or held back
+; in versionReq by ReadRomKey) or a new push of
 ; joystick 2 left or right flips zEnhanced, redraws the version line and
 ; restarts the attract timer, so the screen stays while the player chooses.
 ;------------------------------------------------------------------------------
 VersionKeys:
+        lda     versionReq              ; F1 held back by ReadRomKey
+        bne     @f1
         lda     ROM_KEY
         cmp     #KEY_F1 | $80
         bne     @joy
-        lda     #0
+@f1:    lda     #0
+        sta     versionReq
         sta     ROM_KEY
         beq     @flip
 @joy:   lda     CIA1_PRA                ; joystick 2, low = pushed
@@ -357,4 +371,5 @@ VersionText:
 
         .segment "BSS"
 joyLR:          .res 1
+versionReq:     .res 1          ; F1 seen by ReadRomKey, for VersionKeys
 titleSteps:     .res 2

@@ -55,7 +55,7 @@ C64_SRC := c64/src
 C64_BLD := c64/build
 C64_CFG := c64/cfg/c64.cfg
 # basic_stub first: its jmp Start sits at $080D, the game image right after
-C64_MODS := basic_stub hopper platform zp timing video input sound intro
+C64_MODS := basic_stub hopper platform zp timing video input sound enhanced intro
 C64_OBJS := $(addprefix $(C64_BLD)/,$(addsuffix .o,$(C64_MODS)))
 C64_INCS := $(wildcard $(C64_SRC)/*.inc)
 C64_PRG  := $(C64_BLD)/hopper.prg
@@ -73,7 +73,7 @@ $(C64_BLD)/%.o: $(C64_SRC)/%.s $(C64_INCS) | $(C64_BLD)
 $(C64_PRG): $(C64_OBJS) $(C64_CFG)
 	$(LD65) -C $(C64_CFG) -m $(C64_BLD)/hopper.map -Ln $(C64_BLD)/hopper.lbl -o $@ $(C64_OBJS)
 
-$(C64_BLD)/intro.o $(C64_BLD)/test/intro.o: $(C64_SRC)/intro.rle
+$(C64_BLD)/intro.o $(C64_BLD)/test/intro.o $(C64_BLD)/test-enhanced/intro.o: $(C64_SRC)/intro.rle
 
 c64-intro:
 	$(IMG_PY) tools/make_intro.py
@@ -101,7 +101,21 @@ $(C64_TBLD)/%.o: $(C64_SRC)/%.s $(C64_INCS) | $(C64_TBLD)
 $(C64_TPRG): $(C64_TOBJS) $(C64_CFG)
 	$(LD65) -C $(C64_CFG) -Ln $(C64_TBLD)/hopper.lbl -o $@ $(C64_TOBJS)
 
-c64-smoke: $(C64_TPRG) $(C64_PRG)
+# The same script left in Enhanced (no F1 on the home screen)
+C64_EBLD := $(C64_BLD)/test-enhanced
+C64_EOBJS := $(addprefix $(C64_EBLD)/,$(addsuffix .o,$(C64_MODS) autotest))
+C64_EPRG := $(C64_EBLD)/hopper.prg
+
+$(C64_EBLD):
+	mkdir -p $@
+
+$(C64_EBLD)/%.o: $(C64_SRC)/%.s $(C64_INCS) | $(C64_EBLD)
+	$(CA65) -I $(C64_SRC) -D AUTOTEST -D AUTOTEST_ENHANCED -g -o $@ $<
+
+$(C64_EPRG): $(C64_EOBJS) $(C64_CFG)
+	$(LD65) -C $(C64_CFG) -Ln $(C64_EBLD)/hopper.lbl -o $@ $(C64_EOBJS)
+
+c64-smoke: $(C64_TPRG) $(C64_EPRG) $(C64_PRG)
 	python3 tools/c64_screens.py --out $(C64_BLD)
 	python3 tools/c64_screens.py --out $(C64_BLD) --only intro
 

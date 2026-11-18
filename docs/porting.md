@@ -46,21 +46,22 @@ VICE has none), real key presses and joystick, NTSC timing, the name entry, and 
 
 ## Memory Map (C64)
 
-| Range           | Use                                                     |
-|:----------------|:--------------------------------------------------------|
-| `$0060`–`$008F` | Platform zero page (the game's stays where it was)      |
-| `$0400`–`$0462` | Game variables, as on the Oric                          |
-| `$0500`–`$30D4` | The game, at its Oric addresses                         |
-| `$0801`–`$33FF` | Load image: BASIC stub, then the game, moved by `Start` |
-| `$3100`–`$33FF` | Saved font (`ColdStart`), as on the Oric                |
-| `$3400`–`$7772` | Platform code, tables, packed start-up picture, BSS     |
-| `$8000`–`$83E7` | VIC screen (bank 2)                                     |
-| `$A000`–`$AFFF` | Double-height character sets (top, bottom)              |
-| `$B000`–`$B7FF` | `CHARSET`: the game's font, inverse in `$B400`–`$B7FF`  |
-| `$BA00`–`$BAFF` | Hi-score table, as on the Oric                          |
-| `$BB80`–`$BFDF` | The Oric screen, 40×28, as on the Oric                  |
-| `$C000`–`$C7E7` | Picture: screen colours, colour RAM copy (bank 3)       |
-| `$E000`–`$FF3F` | Picture: bitmap (bank 3, RAM under the KERNAL)          |
+| Range           | Use                                                            |
+|:----------------|:---------------------------------------------------------------|
+| `$0060`–`$008F` | Platform zero page (the game's stays where it was)             |
+| `$0400`–`$0462` | Game variables, as on the Oric                                 |
+| `$0500`–`$30D4` | The game, at its Oric addresses                                |
+| `$0801`–`$33FF` | Load image: BASIC stub, then the game, moved by `Start`        |
+| `$3100`–`$33FF` | Saved font (`ColdStart`), as on the Oric                       |
+| `$3400`–`$7C64` | Platform code, tables, packed start-up picture, BSS            |
+| `$8000`–`$83E7` | VIC screen (bank 2)                                            |
+| `$8800`–`$8FFF` | Enhanced: multicolour lane glyphs ([enhanced.md](enhanced.md)) |
+| `$A000`–`$AFFF` | Double-height character sets (top, bottom)                     |
+| `$B000`–`$B7FF` | `CHARSET`: the game's font, inverse in `$B400`–`$B7FF`         |
+| `$BA00`–`$BAFF` | Hi-score table, as on the Oric                                 |
+| `$BB80`–`$BFDF` | The Oric screen, 40×28, as on the Oric                         |
+| `$C000`–`$C7E7` | Picture: screen colours, colour RAM copy (bank 3)              |
+| `$E000`–`$FF3F` | Picture: bitmap (bank 3, RAM under the KERNAL)                 |
 
 `CHARSET` is the one address that moves: the Oric's was `$B400`, the VIC needs a 2K boundary.
 
