@@ -76,16 +76,17 @@ Script:
         STEP    260, ROMKEY, 'Q'        ; up
         STEP    275, ROMKEY, 'N'        ; down: refused (already left)
         STEP    290, ROMKEY, 'A'        ; down -> credits
-        STEP   2325, ROMKEY, '1'        ; hi-score screen: new game
-        STEP   2755, HOLD, UP           ; hop onto the road...
-        STEP   2795, HOLD, UP
-        STEP   2835, HOLD, LEFT
-        STEP   2875, HOLD, UP
-        STEP   2915, HOLD, UP
-        STEP   2955, HOLD, UP
-        STEP   2995, HOLD, UP
-        STEP   3035, HOLD, UP
-        STEP   3075, HOLD, UP
+        STEP   2450, ROMKEY, KEY_F1     ; home screen: Enhanced -> Classic
+        STEP   2550, ROMKEY, '1'        ; hi-score screen: new game (in Classic)
+        STEP   2980, HOLD, UP           ; hop onto the road...
+        STEP   3020, HOLD, UP
+        STEP   3060, HOLD, LEFT
+        STEP   3100, HOLD, UP
+        STEP   3140, HOLD, UP
+        STEP   3180, HOLD, UP
+        STEP   3220, HOLD, UP
+        STEP   3260, HOLD, UP
+        STEP   3300, HOLD, UP
         .word   $FFFF
 
         .segment "BSS"

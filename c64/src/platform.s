@@ -110,6 +110,8 @@ Start:
         sta     zLastPresent
         sta     zLastPresent+1
         sta     zLastPresent+2
+        lda     #$FF                    ; power up in Enhanced; RESTORE keeps
+        sta     zEnhanced               ; the choice (only Start sets it)
         jsr     UnpackPicture           ; into bank 3, kept for the attract loop
 .ifndef AUTOTEST
         jsr     ShowPicture             ; the start-up picture (intro.s)
@@ -254,9 +256,15 @@ HiscoreTableC64:
 ; about 15 s, the start-up picture comes back and the attract loop goes
 ; round again: picture, credits and instructions, hi-scores. 1 or fire on
 ; the picture starts a game.
+; The first tick on the screen draws the version line (row 25), and F1 or
+; the joystick left/right flips Classic / Enhanced (VersionKeys).
 ;------------------------------------------------------------------------------
 TitleTickC64:
-        inc     titleSteps
+        lda     titleSteps
+        ora     titleSteps+1
+        bne     :+
+        jsr     DrawVersionLine
+:       inc     titleSteps
         bne     :+
         inc     titleSteps+1
 :       lda     titleSteps+1
@@ -266,7 +274,8 @@ TitleTickC64:
         lda     titleSteps
         cmp     #<TITLE_STEPS
         bcs     @picture
-@keys:  jmp     CheckMenuKeys
+@keys:  jsr     VersionKeys
+        jmp     CheckMenuKeys
 @picture:
         pla                             ; not back into TitleScroll
         pla
@@ -282,5 +291,70 @@ TitleTickC64:
         jmp     StartGame
 :       jmp     AttractLoop
 
+;------------------------------------------------------------------------------
+; VersionKeys - on the home screen: F1 (ROM_KEY = KEY_F1) or a new push of
+; joystick 2 left or right flips zEnhanced, redraws the version line and
+; restarts the attract timer, so the screen stays while the player chooses.
+;------------------------------------------------------------------------------
+VersionKeys:
+        lda     ROM_KEY
+        cmp     #KEY_F1 | $80
+        bne     @joy
+        lda     #0
+        sta     ROM_KEY
+        beq     @flip
+@joy:   lda     CIA1_PRA                ; joystick 2, low = pushed
+        eor     #$FF
+        and     #$0C                    ; left or right
+        tax
+        eor     joyLR                   ; changed since the last tick
+        stx     joyLR
+        and     joyLR                   ; and pushed now: a new push
+        bne     @flip
+        rts
+@flip:  lda     zEnhanced
+        eor     #$FF
+        sta     zEnhanced
+        lda     #1                      ; restart the timer (not 0: that redraws)
+        sta     titleSteps
+        lda     #0
+        sta     titleSteps+1
+        ; fall through
+;------------------------------------------------------------------------------
+; DrawVersionLine - row 25 of the Oric screen, blank on the hi-score screen:
+;   [F1] VERSION   CLASSIC   ENHANCED
+; in cyan, the chosen version inverse (a white bar), the other in blue.
+;------------------------------------------------------------------------------
+DrawVersionLine:
+        ldx     #39
+:       lda     VersionText,x
+        sta     VERSION_ROW,x
+        dex
+        bpl     :-
+        ldx     #VERSION_CLASSIC        ; the chosen word inverse, white ink
+        bit     zEnhanced
+        bpl     :+
+        ldx     #VERSION_ENHANCED
+:       lda     #7
+        sta     VERSION_ROW-1,x
+:       lda     VERSION_ROW,x
+        cmp     #$20                    ; the attribute after the word ends it
+        bcc     @r
+        ora     #$80
+        sta     VERSION_ROW,x
+        inx
+        bne     :-
+@r:     rts
+
+        .segment "RODATA"
+
+VERSION_ROW      = SCREEN + 25*40
+VERSION_CLASSIC  = 17                   ; first column of each word's bar
+VERSION_ENHANCED = 27
+VersionText:
+        .byte   "   ", 6, "[F1] VERSION", 4, " CLASSIC ", 4, " ENHANCED ", 7, "  "
+        .assert * - VersionText = 40, error, "the version line must be 40 columns"
+
         .segment "BSS"
+joyLR:          .res 1
 titleSteps:     .res 2

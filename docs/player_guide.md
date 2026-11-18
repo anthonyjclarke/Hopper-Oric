@@ -17,7 +17,9 @@ The tape autoruns. Two menus come first, once only: they come back only after th
 Then the attract cycle: a frog hops round the screen leaving the credits and instructions behind it, they stay for about
 18 seconds, and the hi-score table follows with its title scrolling. **1** starts a game and **2** shows the
 instructions again, on either screen. On the Oric the hi-score screen stays until a key; the C64 version moves on after
-about 15 seconds to its start-up picture, then the credits again ([porting.md](porting.md#decisions)).
+about 15 seconds to its start-up picture, then the credits again ([porting.md](porting.md#decisions)). On the C64
+hi-score screen, **F1** or the joystick left or right also picks the **Classic** or **Enhanced** look
+([enhanced.md](enhanced.md#the-version-switch)).
 
 ---
 

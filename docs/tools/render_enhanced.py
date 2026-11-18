@@ -349,10 +349,10 @@ def draw_home(game, enhanced, cv, t=0):
                     if g[gy][px]:
                         ci = CYCLE[((y + t // 40) >> 1) % len(CYCLE)] if enhanced and cell['dh'] else O2C[cell['ink']]
                 cv.put(x, y, ci)
-    sel = vis.index(25) * 8                                 # V0: the version line
-    text(game, cv, '[F1] VERSION', 3 * 8, sel, CYAN, BLACK)
-    text(game, cv, ' CLASSIC ', 17 * 8, sel, GREY if enhanced else BLACK, BLACK if enhanced else YELLOW)
-    text(game, cv, ' ENHANCED ', 27 * 8, sel, BLACK if enhanced else GREY, YELLOW if enhanced else BLACK)
+    sel = vis.index(25) * 8                                 # V0: the version line, as DrawVersionLine draws it
+    text(game, cv, '[F1] VERSION', 4 * 8, sel, CYAN, BLACK)
+    text(game, cv, ' CLASSIC ', 17 * 8, sel, BLUE if enhanced else BLACK, BLACK if enhanced else WHITE)
+    text(game, cv, ' ENHANCED ', 27 * 8, sel, BLACK if enhanced else BLUE, WHITE if enhanced else BLACK)
     if enhanced:                                            # F1: raster bars, scroller on row 23, hopping frog
         for yb in (-3, 17):
             for k in range(2):

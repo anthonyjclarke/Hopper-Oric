@@ -12,7 +12,7 @@
         .importzp zTick, zIsPAL, zRomIrq, zBlink, zIdleTick
         .importzp zNow, zDeadline, zWait, zDebt, zLastPresent, zT2Dl, zWaitHook
         .importzp zRow, zInk, zPaper, zMode, zRowBg, zComplex, zRowDH, zFg, zBg, zGlyph
-        .importzp zRR, zNeedRefresh, zLastKey, zJoyIdle
+        .importzp zRR, zNeedRefresh, zLastKey, zJoyIdle, zEnhanced
 
 ; --- what WaitCycles calls while it waits (zWaitHook)
 HOOK_NONE       = 0
@@ -24,6 +24,9 @@ MAP_MENU        = 0
 MAP_CREDITS     = 1
 MAP_HISCORE     = 2
 MAP_GAME        = 3
+
+; --- keys ScanRomKey reports beyond the Oric's ASCII (ROM_KEY = code + $80)
+KEY_F1          = $01           ; flips Classic / Enhanced on the home screen
 
 ; --- Oric timings in C64 cycles (one C64 cycle is treated as one Oric
 ; microsecond; PAL runs 1.5% slow, NTSC 2.3% fast, as the code itself does)

@@ -6,9 +6,10 @@ uses the C64 hardware the port leaves idle: sprites, multicolour characters, the
 the SID's filter and envelopes, and about 16 KB of free memory. The player chooses **Classic** or **Enhanced** on the
 home screen and can switch back and forth between games.
 
-**Status: planned.** Nothing in this section is built yet. The pictures are mock-ups drawn by
-`docs/tools/render_enhanced.py` from the real game screens ([How the Mock-Ups Are Made](#how-the-mock-ups-are-made)),
-not VICE captures. Memory and cycle figures are estimates. This chapter is the overview and the version switch;
+**Status.** The version switch (V0) is built and checked in VICE: its pictures below are captures. Everything else is
+planned, and its pictures are mock-ups drawn by `docs/tools/render_enhanced.py` from the real game screens ([How the
+Mock-Ups Are Made](#how-the-mock-ups-are-made)). Memory and cycle figures for the planned changes are estimates. Until
+V1 and the rest are built, Enhanced looks the same as Classic. This chapter is the overview and the version switch;
 [enhanced_graphics.md](enhanced_graphics.md), [enhanced_sound.md](enhanced_sound.md) and
 [enhanced_platform.md](enhanced_platform.md) describe each change in full.
 
@@ -79,12 +80,18 @@ GAME OVER. In both versions it gains one line, on row 25, just above the game's 
    [F1] VERSION   CLASSIC   ENHANCED
 ```
 
-The chosen version sits in a yellow bar, the other in grey. Row 25 is blank on this screen in the original, and the
-port's hi-score row map keeps it.
+`[F1] VERSION` is cyan, the chosen version is in an inverse bar (black on white) and the other is blue. Row 25 is blank
+on this screen in the original, and the port's hi-score row map keeps it.
 
-![The home screen in Classic: today's screen plus the version line](images/enhanced/home-classic.png)
+![VICE: the home screen at power-up, Enhanced chosen](images/screens/hiscores.png)
 
-![The home screen in Enhanced: colour-cycled title, hopping frog, scroller](images/enhanced/home-enhanced.png)
+![VICE: after F1, Classic chosen](images/screens/version.png)
+
+How the home screen will look once F1 (the attract screen) is built, as mock-ups:
+
+![Mock-up: the home screen in Classic](images/enhanced/home-classic.png)
+
+![Mock-up: the home screen in Enhanced, with the colour-cycled title, hopping frog and scroller](images/enhanced/home-enhanced.png)
 
 ### Using It
 
@@ -102,7 +109,7 @@ port's hi-score row map keeps it.
   loop. It doesn't change in the middle of a game.
 - It lasts until power-off. RESTORE, the Oric's RESET, keeps it, as it keeps the hi-scores. With disk hi-scores (F2) it
   is saved with them.
-- A fresh power-up starts in Enhanced (an open question below).
+- A fresh power-up starts in Enhanced (`Start` sets it; an open question below).
 
 ```mermaid
 stateDiagram-v2
@@ -123,8 +130,8 @@ enhancement tests it, and the raster interrupt picks each row's character set an
 memory all the time, so a flip costs one redraw. The details are in
 [enhanced_platform.md](enhanced_platform.md#the-version-flag).
 
-F1 is free on that screen: the game's own keys there are 1 and 2. `RedefineKeys` must also refuse F1 as a movement key,
-as it refuses P and SPACE today.
+F1 is free on that screen: the game's own keys there are 1 and 2. `RedefineKeys` refuses F1 as a movement key, as it
+refuses P and SPACE. Elsewhere F1 does nothing: the menus ignore it, and name entry ignores every code below `$20`.
 
 ---
 

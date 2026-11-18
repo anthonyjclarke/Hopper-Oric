@@ -25,12 +25,13 @@ CAPTURES = {
     'controls': (190, 'Sound chosen; the controls menu'),
     'redefine': (270, 'Redefining: left N, right M, P refused, up Q'),
     'credits': (825, 'The credits, the frog hopping round the screen, keys N M Q A'),
-    'credits-done': (1125, 'The credits finished, waiting'),
-    'hiscores': (2225, 'The hi-score table, title scrolling'),
-    'sheet-start': (2425, 'A new game: the READY / SHEET / SCORE signs'),
-    'play': (2720, 'Playing: lanes moving'),
-    'hops': (2935, 'Hopping up the road: the frog is hit, the death flash'),
-    'later': (3355, 'A little later'),
+    'credits-done': (1400, 'The credits finished, waiting'),
+    'hiscores': (2400, 'The hi-score table, title scrolling; the version line on Enhanced'),
+    'version': (2500, 'F1 pressed on the home screen: the version line on Classic'),
+    'sheet-start': (2650, 'A new game: the READY / SHEET / SCORE signs'),
+    'play': (2945, 'Playing: lanes moving'),
+    'hops': (3160, 'Hopping up the road: the frog is hit, the death flash'),
+    'later': (3580, 'A little later'),
 }
 
 

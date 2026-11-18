@@ -47,7 +47,7 @@ Reconstructed source of P.S.S.'s HOPPER (1983), v1.0 = byte-identical to
 - `tmp0`/`key_state` live at `$07/$08` on the C64 ($00/$01 is the 6510 port).
 - `key_bits` `$08` = down, `$04` = up (the third key slot is down).
 - Never leave IRQs masked for long in C64 code: the raster IRQ sets each
-  row's paper and charset. Platform zero page is `$60-$8F`.
+  row's paper and charset. Platform zero page is `$60-$CF` (`zp.s`).
 - Chars `$3A-$3D` are the frog, also in the credits text: don't show them as
   text (RedefineKeys refuses `:` `;` `=`).
 - `CopyRows` copies columns 2-39 only; columns 0-1 belong to `FastRow` /

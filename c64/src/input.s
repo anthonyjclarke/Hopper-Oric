@@ -283,7 +283,7 @@ JoyToKeys:
 
 ; Matrix index (column * 8 + row) -> ASCII as the Oric ROM gave it. 0 = none.
 KeyAscii:
-        .byte   $7F, $0D, 0, 0, 0, 0, 0, 0                 ; DEL RETURN CRSR F7 F1 F3 F5 CRSR
+        .byte   $7F, $0D, 0, 0, KEY_F1, 0, 0, 0            ; DEL RETURN CRSR F7 F1 F3 F5 CRSR
         .byte   "3", "W", "A", "4", "Z", "S", "E", 0       ; (L-SHIFT)
         .byte   "5", "R", "D", "6", "C", "F", "T", "X"
         .byte   "7", "Y", "G", "8", "B", "H", "U", "V"
@@ -306,7 +306,7 @@ PwLeft:  .byte   "Key for LEFT  :  ", 0
 PwRight: .byte   "Key for RIGHT :  ", 0
 PwUp:    .byte   "Key for UP    :  ", 0
 PwDown:  .byte   "Key for DOWN  :  ", 0
-Refused:        .byte   "P", " ", $0D, $7F, ":", ";", "="
+Refused:        .byte   "P", " ", $0D, $7F, ":", ";", "=", KEY_F1
 RefusedEnd:
 RowBit:         .byte   $01, $02, $04, $08, $10, $20, $40, $80
 

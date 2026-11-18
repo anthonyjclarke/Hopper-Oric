@@ -39,6 +39,8 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 | `CreditsIntroC64` | `$2953`                  | The credits row map, then `CreditsIntro`                                      |
 | `HiscoreTableC64` | `$2971`, `$1B51`         | The hi-score row map, the title timer, then `DrawHiScoreTable`                |
 | `TitleTickC64`    | `$2938` (`TitleScroll`)  | `CheckMenuKeys`; after `TITLE_STEPS` steps the picture, then the attract loop |
+| `VersionKeys`     | from `TitleTickC64`      | F1 or joystick left/right: flip `zEnhanced`, restart the timer                |
+| `DrawVersionLine` | from `TitleTickC64`      | The version line, row 25 of the hi-score screen ([enhanced.md](enhanced.md))  |
 | `EraseFlyC64`     | `$2A1B` (`EraseFly`)     | Erase the fly; with no fly, write to `tmp0` / `key_state`, not the 6510 port  |
 | `RedefineKeys`    | `$2F91` (`ControlsMenu`) | Choice 2: ask for the four keys                                               |
 
@@ -98,7 +100,7 @@ The row maps hide the three rows each screen leaves blank: menus 9–11, credits
 |:---------------|:------------------------------------------------------------------------------------------------------------|
 | `InitInput`    | CIA1 port A out (columns), port B in (rows)                                                                 |
 | `ReadKeysC64`  | The Oric's `ReadKeys`: `key_state` from `key_rows` / `key_cols` / `key_bits`, plus joystick 2 (`JoyToKeys`) |
-| `ScanRomKey`   | From the frame interrupt: a newly pressed key into `ROM_KEY` as ASCII + `$80` (`KeyAscii`)                  |
+| `ScanRomKey`   | From the frame interrupt: a newly pressed key into `ROM_KEY` as ASCII + `$80` (`KeyAscii`); F1 is `KEY_F1`  |
 | `RedefineKeys` | Controls choice 2: prompts under the menu, fills `keys_set2` and the key names                              |
 | `WaitNoKeys`   | Before each prompt: wait until no key has been down for `RELEASE_FRAMES` frames                             |
 

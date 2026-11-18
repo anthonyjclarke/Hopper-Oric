@@ -23,6 +23,7 @@ changed: `make verify` keeps it byte-identical to the tape.
 | 6 | Attract loop: hi-scores, picture, credits        | Presentation   | `TitleTickC64`                |
 | 7 | No hang when the frog reaches a home with no fly | Fix (hardware) | `EraseFlyC64`                 |
 | 8 | Hardware stand-ins: screen, sound, keys, RESET   | Port           | [porting.md](porting.md)      |
+| 9 | Version line on the hi-score screen (F1)         | Presentation   | `VersionKeys`                 |
 
 ---
 
@@ -57,10 +58,10 @@ down).
 
 **C64 Remix.** Choice 2 is **Redefine keys** (`RedefineKeys`, `input.s`, in place of `cmp #'2' / bne` at `$2F91`). It
 asks for left, right, up and down in turn under the menu, and refuses P (pause), SPACE, RETURN, DEL, `:` `;` `=` (the
-frog's characters in the credits text) and a key already chosen. Before each prompt it waits until no key has been down
-for 5 frames (`WaitNoKeys`), so the key that chose 2, or a bounce, isn't taken as LEFT. It writes each key's column
-select, row mask and key bit into the Oric's second key table (`keys_set2`), which the menu's own code then copies into
-use as before, and puts the four key names into the instructions text.
+frog's characters in the credits text), F1 (the version switch) and a key already chosen. Before each prompt it waits
+until no key has been down for 5 frames (`WaitNoKeys`), so the key that chose 2, or a bounce, isn't taken as LEFT. It
+writes each key's column select, row mask and key bit into the Oric's second key table (`keys_set2`), which the menu's
+own code then copies into use as before, and puts the four key names into the instructions text.
 
 **Why.** Fixed punctuation keys don't survive host keymaps in VICE, and choosing your own keys is the usual C64
 convention.
@@ -122,6 +123,16 @@ Not remixes, but things that can't be the same on a C64, described in [porting.m
 is shown on 25 rows (three blank rows hidden per screen), in the C64's font, with per-row paper colours; the AY sound
 plays on the SID; RESTORE is the Oric's RESET button; the delays run on a CIA clock (PAL plays 1.5% slow, NTSC 2.3%
 fast). Its **Known Differences** table lists what shows.
+
+---
+
+## 9. Version Line on the Hi-Score Screen
+
+**Original.** Row 25 of the hi-score screen is blank.
+
+**C64.** It shows `[F1] VERSION  CLASSIC  ENHANCED`, and F1 or the joystick left or right picks Classic (the port as
+this chapter describes it) or the C64 Enhanced look (`VersionKeys` and `DrawVersionLine`, from `TitleTickC64`). Play is
+the same in both. Everything about the Enhanced version is in [enhanced.md](enhanced.md).
 
 ---
 

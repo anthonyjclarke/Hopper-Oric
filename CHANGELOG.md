@@ -4,6 +4,10 @@
 
 ### Added
 
+- C64 version switch (V0 of `docs/enhanced.md`): row 25 of the hi-score screen shows `[F1] VERSION  CLASSIC  ENHANCED`,
+  and F1 or the joystick left or right flips it (`VersionKeys`, `DrawVersionLine`, from `TitleTickC64`), restarting the
+  attract timer. The choice is the zero-page flag `zEnhanced`, set to Enhanced at power-up and kept through RESTORE.
+  Enhanced has no visible changes yet. `RedefineKeys` refuses F1, which `ScanRomKey` now reports as `KEY_F1`.
 - A **C64 Enhanced** section in the documentation, for a planned second look the player picks on the home screen
   (F1 flips Classic and Enhanced): `docs/enhanced.md` (overview, ground rules, the version switch, plan of work, open
   questions), `docs/enhanced_graphics.md` (multicolour lanes, sprite frog and fly, water and grass, road markings, an
@@ -67,6 +71,10 @@
 
 ### Fixed
 
+- The scripted C64 test (`c64/src/autotest.s`) pressed 1 on the credits screen, so the `hiscores` capture showed the
+  credits: the hi-score screen comes later since `AttractWait`. The script now waits for it, presses F1 there (new
+  `version` capture) and starts the game 225 frames later; the play captures move with it. `credits-done` moves from
+  frame 1125, where the frog was still drawing the credits, to 1400.
 - C64 hung whenever the frog reached the home row with no fly showing (every home, hedge or full-home death on sheets
   1–2): the Oric's `EraseFly` writes two spaces through `fly_ptr`, which is `$0000` then, so it hit `$00`/`$01`, the
   6510's port, switching BASIC, KERNAL and I/O in. `EraseFlyC64` puts those spaces where the Oric's `tmp0` and

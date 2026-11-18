@@ -1,29 +1,40 @@
 # Hopper – Enhanced Platform Layer
 
-How the C64 Enhanced version ([enhanced.md](enhanced.md)) is planned to fit into the platform layer
+How the C64 Enhanced version ([enhanced.md](enhanced.md)) fits into the platform layer
 ([platform_layer.md](platform_layer.md)): the version flag, the two hooks into the game, the changes to the raster
-interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. Nothing here is built
-yet. Names in this chapter that don't exist in `c64/src/` yet are listed under [Planned Names](#planned-names).
+interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. Only the version flag is
+built so far; the rest is the plan. Names in this chapter that don't exist in `c64/src/` yet are listed under [Planned
+Names](#planned-names).
 
 ---
 
 ## The Version Flag
 
-One zero-page byte in the platform's area (`$60`–`$8F`), `zEnhanced`: 0 for Classic, `$FF` for Enhanced. Every
-enhancement tests it, and with it clear the platform runs exactly today's code paths. There is one `.prg` with both
+**Built.** One zero-page byte, `zEnhanced` (`$90`, in the platform's area): 0 for Classic, `$FF` for Enhanced. `Start`
+sets it to `$FF`, so a power-up is in Enhanced. Nothing else writes it but the switch: RESTORE goes through the Oric's
+RESET path (`NmiHandler`, `WarmStart`), which doesn't touch the platform's zero page, so the choice survives it. Every
+enhancement will test it, and with it clear the platform runs exactly today's code paths. There is one `.prg` with both
 looks loaded all the time, so flipping costs nothing but a redraw.
 
-`TitleTickC64`, which already replaces the game's `jsr CheckMenuKeys` in `TitleScroll` (`$2938`), handles the switch:
+`TitleTickC64`, which already replaces the game's `jsr CheckMenuKeys` in `TitleScroll` (`$2938`), does three things for
+the switch:
 
-1. It reads F1 from the keyboard matrix and joystick port 2 left or right, with the same debounce as `WaitNoKeys`, so
-   one press flips once.
-2. On a flip it inverts `zEnhanced`, redraws the version line (`DrawVersionLine`) and resets `titleSteps`, so the
-   attract timer starts again.
-3. It marks every row for a fresh parse, so the next `Present` redraws the screen in the new style.
+1. On the screen's first tick (`titleSteps` still 0) it calls `DrawVersionLine`. The line is drawn there and not in
+   `HiscoreTableC64`, because the name entry screen also draws the table, and doesn't show the line.
+2. Before `CheckMenuKeys`, `VersionKeys` looks for F1 or a new push of the joystick left or right. `ScanRomKey` reports
+   F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like any other key, so a held F1 flips once. The joystick is
+   edge-detected in `joyLR`.
+3. On a flip it inverts `zEnhanced`, sets `titleSteps` back to 1, so the 15-second attract timer starts again, and falls
+   into `DrawVersionLine`.
 
-`HiscoreTableC64`, which already draws the table for both entries to the screen (`$2971`, `$1B51`), also calls
-`DrawVersionLine`, so the line is there whenever the home screen is. RESTORE goes through the Oric's RESET path, which
-never clears the platform's zero page, so the choice survives it.
+`DrawVersionLine` writes row 25 of the Oric screen (`SCREEN` + 1000) from `VersionText`: a cyan ink attribute and `[F1]
+VERSION`, then each version name after a blue ink attribute. For the chosen one it makes the attribute white and sets
+bit 7 of each character, the Oric's inverse, which the port shows as black on white. Because the row starts with a
+character and has attributes further in, `ScanRow` sends it to `ParseRow` on its first copy, so it shows in the right
+colours at once ([porting.md](porting.md#decisions)).
+
+`make c64-smoke` presses F1 on the home screen (`c64/src/autotest.s`), and its `hiscores` and `version` captures show
+both states. The game it then starts is in Classic.
 
 ---
 
