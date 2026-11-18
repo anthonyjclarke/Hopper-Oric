@@ -2,6 +2,7 @@
 
 HOPPER is a Frogger-style game for the Oric-1, published by Personal Software
 Services (P.S.S.), Coventry. The in-game credits name the author as A.J. Clarke.
+The game's entry on oric.org: [Hopper](https://www.oric.org/software/hopper-1427.html).
 
 This repository rebuilds the game from assembly source. `make verify` assembles
 `src/hopper.s` and checks that the result is **byte-identical** to the original
@@ -23,6 +24,35 @@ tape image in `original/HOPPER.TAP`.
 | `tools/annotations.py`  | Names, comments and data layout it uses       |
 | `tools/dis_range.py`    | Quick linear disassembly of an address range  |
 | `.vscode/`              | Build/verify/run tasks and ca65 highlighting  |
+| `c64/`                  | The Commodore 64 port                         |
+| `docs/`                 | Documentation and the `HOPPER.html` handbook  |
+| `justfile`              | Documentation recipes (`just docs`)           |
+
+---
+
+## Commodore 64 version
+
+`c64/` holds a C64 port: the Oric code itself, with only the hardware replaced (the screen, sound chip, keyboard and
+timers), running on a small platform layer. See [docs/porting.md](docs/porting.md), and
+[docs/HOPPER.html](docs/HOPPER.html), the full documentation in one offline page ([docs/README.md](docs/README.md)
+lists the chapters).
+
+```bash
+make c64
+```
+
+```bash
+make c64-run
+```
+
+The output is `c64/build/hopper.prg` (`make c64-d64` for a disk image). It opens on a picture made from the PSS
+cassette inlay (any key or fire skips it), which comes back in the attract loop: picture, credits and instructions,
+hi-scores (1 or fire on the picture starts a game). Keys: choice 1 is Z, X, K, M (left, right, up, down); choice 2 asks for
+your own four keys; P pauses; joystick port 2 works with either. RESTORE is the Oric's RESET button.
+
+This is the **C64 Remix**: it plays as the Oric original except for a short list of deliberate changes (Redefine keys,
+the Z X K M key set, the joystick, the start-up picture and attract loop, the frog reaching the outermost columns, and
+a fix for a hang the Oric code causes on a C64). [docs/remix.md](docs/remix.md) documents each one.
 
 ---
 
