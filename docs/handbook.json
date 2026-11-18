@@ -16,8 +16,8 @@
         "labelOn": "Switch to the standard font",
         "credit": "C64 Pro and C64 Pro Mono fonts © 2010–2019 Style (style64.org/c64-truetype), embedded unmodified with @font-face as their licence allows."
     },
-    "description": "Hopper (Oric-1, A.J. Clarke, PSS, 1983) reconstructed as byte-identical source and re-hosted on the Commodore 64: play, the original release, graphics, sound, architecture, data formats, the source and toolchain, the C64 port and its platform layer.",
-    "includes": "screens and glyphs decoded from the Oric tape, VICE screenshots of the C64 build, the original cover and advert, and diagrams",
+    "description": "Hopper (Oric-1, A.J. Clarke, PSS, 1983) reconstructed as byte-identical source and re-hosted on the Commodore 64: play, the original release, graphics, sound, architecture, data formats, the source and toolchain, the C64 port and its platform layer, and the planned C64 Enhanced version.",
+    "includes": "screens and glyphs decoded from the Oric tape, VICE screenshots of the C64 build, the original cover and advert, mock-ups of the C64 Enhanced version, and diagrams",
     "groups": [
         {
             "id": "guide",
@@ -44,6 +44,16 @@
                 "CHANGELOG.md",
                 "docs/html_documentation.md",
                 "docs/credits.md"
+            ]
+        },
+        {
+            "id": "enhanced",
+            "label": "C64 Enhanced",
+            "sources": [
+                "docs/enhanced.md",
+                "docs/enhanced_graphics.md",
+                "docs/enhanced_sound.md",
+                "docs/enhanced_platform.md"
             ]
         },
         {

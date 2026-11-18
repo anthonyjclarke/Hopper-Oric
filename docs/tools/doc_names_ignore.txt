@@ -1,3 +1,10 @@
 # Words in code spans that look like labels but are not source names.
 retroFont
 DOCS_PYTHON
+# Planned names in docs/enhanced_platform.md (not in the source yet): remove each one once it exists.
+zEnhanced
+DrawVersionLine
+SetTurtleFrameC64
+SetFrogGfxC64
+UpdateSprites
+rowSpace

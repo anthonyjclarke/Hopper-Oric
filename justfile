@@ -19,6 +19,7 @@ docs: build c64
     {{docs_py}} docs/tools/capture_screens.py
     {{docs_py}} docs/tools/render_graphics.py
     {{docs_py}} docs/tools/render_oric.py
+    {{docs_py}} docs/tools/render_enhanced.py
     node docs/tools/build_docs.mjs
 
 # Regenerate docs/HOPPER.html from the Markdown and the current images only.
@@ -41,6 +42,7 @@ docs-screens: c64
 docs-graphics: build
     {{docs_py}} docs/tools/render_graphics.py
     {{docs_py}} docs/tools/render_oric.py
+    {{docs_py}} docs/tools/render_enhanced.py
 
 # Fail if a chapter names a label that is not in the source.
 docs-names:

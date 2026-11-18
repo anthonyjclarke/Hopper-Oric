@@ -4,6 +4,13 @@
 
 ### Added
 
+- A **C64 Enhanced** section in the documentation, for a planned second look the player picks on the home screen
+  (F1 flips Classic and Enhanced): `docs/enhanced.md` (overview, ground rules, the version switch, plan of work, open
+  questions), `docs/enhanced_graphics.md` (multicolour lanes, sprite frog and fly, water and grass, road markings, an
+  Oric-style font, the attract screen, smooth lanes), `docs/enhanced_sound.md` (SID voicing, effects, a title tune) and
+  `docs/enhanced_platform.md` (version flag, hooks, raster interrupt, sprites, memory, disk hi-scores, testing). Its
+  mock-ups come from the new `docs/tools/render_enhanced.py`, run by `just docs` and `just docs-graphics`. Nothing in it
+  is built yet.
 - README and `docs/credits.md` link to the game's entry on oric.org.
 - `docs/oric.md`, an appendix on the Oric for readers new to it: history, specifications, memory map, serial attributes
   and the three video modes, the AY-3-8912 and how the VIA reaches it, BASIC examples (run on the Atmos ROM in Auric),

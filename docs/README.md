@@ -3,7 +3,7 @@
 *Hopper* is a *Frogger*-style arcade game for the Oric-1, written by A.J. Clarke and published on cassette in 1983 by
 Personal Software Services (PSS) of Coventry. This repository holds a byte-identical, commented ca65 reconstruction of
 the original tape, and a Commodore 64 version built from it: the Oric game code itself, every byte at its Oric address,
-re-hosted on a small C64 platform layer.
+re-hosted on a small C64 platform layer, with a planned Enhanced look the player can switch to.
 
 **[HOPPER.html](HOPPER.html)** gathers every document below, with the images embedded, into one page that reads offline
 in a browser.
@@ -35,6 +35,19 @@ in a browser.
 | [CHANGELOG.md](../CHANGELOG.md)                | Release history                                        |
 | [html_documentation.md](html_documentation.md) | Regenerating the figures, screenshots and the handbook |
 | [credits.md](credits.md)                       | Who made the game and this repository; tools and links |
+
+---
+
+## C64 Enhanced
+
+A planned second look for the C64 version, chosen on the home screen: same game, more of the C64's hardware.
+
+| Document                                     | Covers                                                    |
+|:---------------------------------------------|:----------------------------------------------------------|
+| [enhanced.md](enhanced.md)                   | Overview, ground rules, the version switch, plan of work  |
+| [enhanced_graphics.md](enhanced_graphics.md) | Multicolour lanes, sprites, textures, markings, scrolling |
+| [enhanced_sound.md](enhanced_sound.md)       | SID voicing of the tunes, effects, a title tune           |
+| [enhanced_platform.md](enhanced_platform.md) | Version flag, hooks, raster interrupt, memory, testing    |
 
 ---
 

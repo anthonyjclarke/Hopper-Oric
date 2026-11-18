@@ -35,6 +35,7 @@ Run from the repository root, in this order. The figure tools need Pillow: on th
 | Capture the screens         | `python3 docs/tools/capture_screens.py`  | VICE (`x64sc`)   | `docs/images/screens/`     |
 | Decode the Oric figures     | `python3 docs/tools/render_graphics.py`  | Pillow, VICE ROM | `docs/images/graphics/`    |
 | Draw the appendix figures   | `python3 docs/tools/render_oric.py`      | Pillow           | `docs/images/graphics/`    |
+| Draw the Enhanced mock-ups  | `python3 docs/tools/render_enhanced.py`  | Pillow, VICE ROM | `docs/images/enhanced/`    |
 | Generate the HTML           | `node docs/tools/build_docs.mjs`         | Node.js 20+      | `docs/HOPPER.html`         |
 | Check the HTML is current   | `node docs/tools/build_docs.mjs --check` | Node.js 20+      | –                          |
 
@@ -66,6 +67,11 @@ regenerates it whenever a source changes. `just docs-graphics` and `just docs-sc
   envelope shapes for `oric_specs.md`. It reads nothing from the game, so the file is the same in every Oric reconstruction.
 - **Oric appendix screenshot.** `oric-basic-hires.png` is a capture of `oric_specs.md`'s HIRES BASIC example running in the
   Auric emulator on the Atmos ROM; it is not generated, so re-render it by hand if the example changes.
+- **C64 Enhanced mock-ups.** `render_enhanced.py` draws the pictures in the C64 Enhanced chapters. The Enhanced version
+  is planned, not built, so these are mock-ups: the screens are the game's own (drawn on the 6502 core, as above), shown
+  the way the port shows them (rows hidden, glyphs widened to 8 pixels, the C64 font, the Pepto palette), with each
+  planned change applied as the chapters describe it. It also writes the two animations, `hop.gif` and
+  `smooth-lanes.gif`. When a change is built, a VICE capture replaces its mock-up.
 - **The start-up picture's design.** `tools/make_intro.py` writes `docs/images/graphics/intro-design.png` with
   `c64/src/intro.rle` (`make c64-intro`).
 
