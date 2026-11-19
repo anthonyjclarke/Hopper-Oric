@@ -22,16 +22,22 @@
 ; time. A changed column 0 or 1 is seen at once; attributes appearing later
 ; in a row are found by ParseNextRow, which the waits run in spare time.
 ;
-; Columns 0-1 are drawn only by FastRow and ParseRow, never by the copy, so
-; both show them as the Oric does (column 0 black, column 1 the row's
-; paper) and a parse cannot leave a cell there that the next copy undoes.
+; The picture sits one column left of the Oric's: Oric column c is VIC
+; column c-1, so the playfield (Oric columns 2-39) has one column of the
+; row's paper each side, Oric column 1 on the left and VIC column 39, a
+; space nothing writes, on the right. Oric column 0 is not shown (on the
+; Oric it is black, which left the C64 picture lopsided).
+;
+; Oric column 1 is drawn only by FastRow and ParseRow, never by the copy, so
+; both show it as the Oric does (the row's paper) and a parse cannot leave a
+; cell there that the next copy undoes.
 ;==============================================================================
 
         .include "c64.inc"
 
-        .export InitVideo, SetRowMap, Present, ParseNextRow, RefreshCharsets
+        .export InitVideo, SetRowMap, Present, ParseNextRow, RefreshCharsets, BuildFont
         .export rowPaper, rowCset, rowMap, curMap
-        .import McRowSetup, McDynamic, mcStale
+        .import McRowSetup, McDynamic, mcStale, KeepC64Font, TakeF1, FineRow, rowCtl2
 
         .segment "CODE"
 
@@ -148,7 +154,8 @@ BuildFont:
         bne     @ch
         lda     #MEM_IO_ONLY
         sta     CPU_PORT
-        rts
+        jmp     KeepC64Font             ; enhanced.s: keep a copy, and in
+                                        ; Enhanced put the Oric-style font in
 
 ;------------------------------------------------------------------------------
 ; RefreshCharsets - from the live CHARSET codes $20-$7F, rebuild their
@@ -257,6 +264,15 @@ SetRowMap:
         bne     :+
         ldx     zEnhanced
 :       stx     zMcPlay
+        pha
+        txa                             ; $D016 per row: multicolour in
+        and     #$10                    ; Enhanced play, no fine scroll yet
+        ora     #$08
+        ldx     #C64_ROWS-1
+@ctl2:  sta     rowCtl2,x
+        dex
+        bpl     @ctl2
+        pla
         tax
         lda     MapLo,x
         sta     zPtr
@@ -323,7 +339,13 @@ SetRowMap:
 ; Present - show the Oric screen. Clobbers A, X, Y and the zp temporaries.
 ;------------------------------------------------------------------------------
 Present:
-        bit     zMcPlay                 ; Enhanced play: keep the multicolour
+        lda     zRomIrq                 ; front end (the ROM IRQ fills ROM_KEY):
+        beq     :+                      ; F1 flips the version on any screen
+        lda     ROM_KEY
+        cmp     #KEY_F1 | $80
+        bne     :+
+        jsr     TakeF1
+:       bit     zMcPlay                 ; Enhanced play: keep the multicolour
         bpl     :+                      ; set in step with the game's glyphs
         jsr     McDynamic
 :       ldx     #0
@@ -334,8 +356,17 @@ Present:
         sta     @call+1
         lda     CopyHi,x
         sta     @call+2
+        bit     zMcPlay                 ; Enhanced play: the row's fine scroll
+        bpl     @call                   ; (V4), taken with its characters
+        jsr     FineRow
+        sta     fineNext
 @call:  jsr     $FFFF                   ; CopyRow n (patched above)
         ldx     zRow
+        bit     zMcPlay
+        bpl     :+
+        lda     fineNext                ; stored just after the copy
+        sta     rowCtl2,x
+:
         lda     rowSrcLo,x
         sta     zSrc
         lda     rowSrcHi,x
@@ -359,6 +390,11 @@ Present:
 @fast:  jsr     FastRow
         jmp     @next
 @parse: jsr     ParseRow
+        bit     zMcPlay                 ; V4: a parsed row's fine scroll
+        bpl     @next
+        ldx     zRow
+        jsr     FineRow
+        sta     rowCtl2,x
 @next:  ldx     zRow
         inx
         cpx     #C64_ROWS
@@ -474,15 +510,15 @@ FastRow:
         bpl     :+
         jsr     McRowSetup              ; Enhanced lanes: ink + 8, CS_MC
 :       ldy     #COLS-1
-@fill:  sta     (zCol),y
+@fill:  sta     (zCol),y                ; Oric columns 39-1 (column 0 unseen)
         dey
-        bpl     @fill
+        bne     @fill
         lda     rowDstLo,x
         sta     zDst
         lda     rowDstHi,x
         sta     zDst+1
-        ldy     #1
-@att:   lda     zFg,y                   ; the row's paper: blank; else a block
+        ldy     #1                      ; column 1 (column 0 is not shown)
+        lda     zBg                     ; the row's paper: blank; else a block
         cmp     zPaper
         beq     @blank
         tax
@@ -492,8 +528,6 @@ FastRow:
         bne     @put
 @blank: lda     #$20
 @put:   sta     (zDst),y
-        dey
-        bpl     @att
         rts
 @full:  ldx     zRow
         jmp     ParseRow
@@ -569,6 +603,8 @@ ParseRow:
         and     #7
         sta     zPaper
 @attrShow:
+        cpy     #0                      ; column 0 is not shown
+        beq     @next
         lda     zPaper
         cpx     #$80
         bcc     :+
@@ -614,7 +650,7 @@ ParseRow:
         beq     :+
         lda     zBg                     ; blink, hidden phase
         sta     zFg
-:       lda     zBg
+:       lda     zBg                     ; (column 0 is always an attribute)
         cmp     zRowBg
         bne     @swap
         lda     zGlyph
@@ -670,8 +706,14 @@ ParseRow:
         rts
 
 ; McSimple - ParseRow found row X simple: on an Enhanced lane row, colour
-; columns 2-39 with the lane's multicolour ink, as FastRow would.
+; columns 2-39 with the lane's multicolour ink, as FastRow would. A row that
+; starts with a character is not showing a lane (the sheet-start signs on
+; a cleared screen): it stays hires, without road markings.
 McSimple:
+        ldy     #0
+        lda     (zSrc),y
+        and     #$60
+        bne     @r
         ldy     zInk
         lda     C64Colour,y
         jsr     McRowSetup
@@ -685,8 +727,9 @@ McSimple:
 @r:     rts
 
 ;------------------------------------------------------------------------------
-; CopyRows - per C64 row, 38 x (lda Oric cell / sta VIC cell) for columns
-; 2-39, and rts. Columns 0-1 are FastRow's and ParseRow's. The lda operands
+; CopyRows - per C64 row, 38 x (lda Oric cell / sta VIC cell) for Oric
+; columns 2-39 (VIC columns 1-38), and rts. Oric column 1 is FastRow's and
+; ParseRow's. The lda operands
 ; are set by SetRowMap.
 ;------------------------------------------------------------------------------
 COPY_COLS       = COLS - 2
@@ -695,7 +738,7 @@ COPYROW_SIZE    = COPY_COLS*6 + 1
 .macro COPYROW r
         .repeat COPY_COLS, i
         lda     a:SCREEN+2+i
-        sta     a:VIC_SCREEN + (r)*COLS + 2 + i
+        sta     a:VIC_SCREEN + (r)*COLS + 1 + i
         .endrepeat
         rts
 .endmacro
@@ -725,19 +768,19 @@ OricRowHi:
         .endrepeat
 rowDstLo:
         .repeat C64_ROWS, r
-        .byte   <(VIC_SCREEN + r*COLS)
+        .byte   <(VIC_SCREEN + r*COLS - 1)  ; Oric column c -> VIC column c-1
         .endrepeat
 rowDstHi:
         .repeat C64_ROWS, r
-        .byte   >(VIC_SCREEN + r*COLS)
+        .byte   >(VIC_SCREEN + r*COLS - 1)
         .endrepeat
 rowColLo:
         .repeat C64_ROWS, r
-        .byte   <(COLOUR_RAM + r*COLS)
+        .byte   <(COLOUR_RAM + r*COLS - 1)
         .endrepeat
 rowColHi:
         .repeat C64_ROWS, r
-        .byte   >(COLOUR_RAM + r*COLS)
+        .byte   >(COLOUR_RAM + r*COLS - 1)
         .endrepeat
 
 ; Oric colour (0 black, 1 red, 2 green, 3 yellow, 4 blue, 5 magenta, 6 cyan,
@@ -792,6 +835,7 @@ CustomGlyphs:
         .byte   $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ; DEL
 
         .segment "BSS"
+fineNext:       .res 1          ; V4: the row's $D016, from FineRow
 rowMap:         .res C64_ROWS
 rowSrcLo:       .res C64_ROWS
 rowSrcHi:       .res C64_ROWS

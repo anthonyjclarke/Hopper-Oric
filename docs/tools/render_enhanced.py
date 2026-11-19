@@ -21,6 +21,7 @@ LBL = os.path.join(ROOT, 'build', 'hopper.lbl')
 CHARGEN = '/opt/homebrew/share/vice/C64/chargen-901225-01.bin'
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import oric_screens  # noqa: E402
+import oric_style_font  # noqa: E402
 
 PEPTO = [(0x00, 0x00, 0x00), (0xFF, 0xFF, 0xFF), (0x68, 0x37, 0x2B), (0x70, 0xA4, 0xB2), (0x6F, 0x3D, 0x86),
          (0x58, 0x8D, 0x43), (0x35, 0x28, 0x79), (0xB8, 0xC7, 0x6F), (0x6F, 0x4F, 0x25), (0x43, 0x39, 0x00),
@@ -32,12 +33,9 @@ O2C = [BLACK, RED, GREEN, YELLOW, BLUE, PURPLE, CYAN, WHITE]  # C64Colour in c64
 
 SCREEN, CHARSET = 0xBB80, 0xB400
 PLAY_HIDDEN, HOME_HIDDEN = (3, 19, 22), (3, 20, 21)            # the port's row maps (docs/porting.md)
-FRAME_MS = 30
 
-# Lanes: rows -> lane number; lane direction and frames per step (lane_speeds_init) for the moving figures.
+# Lanes: rows -> lane number (draw_play takes a pixel offset per lane).
 LANES = {4: 0, 5: 0, 7: 1, 8: 1, 10: 2, 11: 2, 13: 3, 14: 3, 17: 4, 18: 4, 20: 5, 21: 5, 23: 6, 24: 6}
-LANE_DIR = [-1, 1, -1, 1, -1, 1, -1]
-LANE_FRAMES = [11, 5, 7, 5, 7, 13, 6]
 
 # V1: multicolour colours per row: (full = colour RAM 0-7, half = $D022, edge = $D023).
 MC_ROW = {4: (BLACK, BROWN, ORANGE), 5: (BLACK, BROWN, ORANGE),       # as built: LaneShade / LaneLight in
@@ -89,13 +87,26 @@ def is_game_code(c):
 
 
 def c64_font():
-    """ASCII 32-95 from the C64 character ROM (upper case set), 8 pixels wide, as the port shows text."""
+    """ASCII $20-$7E from the C64 character ROM's lower/upper case set, as the port's BuildFont maps it."""
     rom = open(CHARGEN, 'rb').read()
     font = {}
-    for code in range(0x20, 0x60):
-        screen = code - 0x40 if code >= 0x40 else code
-        font[code] = [[(rom[screen * 8 + y] >> (7 - x)) & 1 for x in range(8)] for y in range(8)]
+    for code in range(0x20, 0x7F):
+        if 0x61 <= code <= 0x7A:
+            screen = code - 0x60
+        elif code == 0x40:
+            screen = 0
+        elif 0x5B <= code <= 0x60 or code >= 0x7B:
+            screen = {0x5B: 0x1B, 0x5D: 0x1D, 0x5E: 0x1E}.get(code, 0x20)
+        else:
+            screen = code
+        font[code] = [[(rom[0x800 + screen * 8 + y] >> (7 - x)) & 1 for x in range(8)] for y in range(8)]
     return font
+
+
+def oric_font(layout):
+    """The Oric-style font (V7 draft, tools/oric_style_font.py) in one of its two layouts."""
+    data = oric_style_font.c64_bytes(layout)
+    return {c: [[(b >> (7 - x)) & 1 for x in range(8)] for b in rows] for c, rows in data.items()}
 
 
 def to_mc(g, edges=True):
@@ -134,6 +145,8 @@ class Game:
         h = oric_screens.screen_hiscores()
         self.play = self.parse(g[SCREEN:SCREEN + 1120])
         self.home = self.parse(h[SCREEN:SCREEN + 1120])
+        self.menu = self.parse(oric_screens.screen_menu()[SCREEN:SCREEN + 1120])
+        self.credits = self.parse(oric_screens.screen_credits()[SCREEN:SCREEN + 1120])
         self.glyphs = {c: glyph_at(g, CHARSET + c * 8) for c in range(128) if is_game_code(c)}
         lab = labels()
         t = oric_screens.load()
@@ -168,7 +181,7 @@ class Game:
         return rows
 
     def text_glyph(self, code):
-        return self.font.get(code) or self.font.get(code & 0x5F) or [[0] * 8 for _ in range(8)]
+        return self.font.get(code) or [[0] * 8 for _ in range(8)]
 
     def frog_bitmap(self, d):
         q = self.frog[d]
@@ -224,6 +237,11 @@ def tuft(cx, px, py, row):
     return -1
 
 
+def oric_col(x):
+    """The Oric column the port shows at VIC pixel x: the picture sits one column left (c64/src/video.s)."""
+    return (x >> 3) + 1
+
+
 def draw_play(game, opt, cv, frog=None, offsets=None, rows=None, phase=0):
     """The playfield on cv (320x200). frog = (col, dir) for the character frog when opt['frog'] is off."""
     vis = [r for r in range(28) if r not in PLAY_HIDDEN]
@@ -237,12 +255,12 @@ def draw_play(game, opt, cv, frog=None, offsets=None, rows=None, phase=0):
         for py in range(8):
             y = vy * 8 + py
             for x in range(320):
-                col = x >> 3
-                if col < 2:
-                    cv.put(x, y, BLACK if col == 0 else O2C[cells[1]['paper']])
+                col = oric_col(x)
+                if col < 2 or col > 39:                     # the margins: Oric column 1 and VIC column 39
+                    cv.put(x, y, O2C[cells[1]['paper']])
                     continue
                 if lane is not None:
-                    sx = (x - 16 - off) % 304
+                    sx = (x - 8 - off) % 304
                     c, px = 2 + (sx >> 3), sx & 7
                 else:
                     c, px = col, x & 7
@@ -275,11 +293,11 @@ def draw_play(game, opt, cv, frog=None, offsets=None, rows=None, phase=0):
     if opt['road']:
         for r in (20, 23):
             y = vis.index(r) * 8
-            for x in range(16, 320):
+            for x in range(320):
                 if cv.get(x, y) == PEPTO[BLACK]:
                     cv.put(x, y, GREY)
     if opt['fly']:
-        draw_fly(cv, 20 * 8 + 2, 8 + 2, 0)
+        draw_fly(cv, 19 * 8 + 2, 8 + 2, 0)
 
 
 _MC = {}
@@ -341,7 +359,7 @@ def draw_home(game, enhanced, cv, t=0):
         for py in range(8):
             y = vy * 8 + py
             for x in range(320):
-                cell, px = game.home[r][x >> 3], x & 7
+                cell, px = game.home[r][min(39, oric_col(x))], x & 7
                 ci = O2C[cell['paper']]
                 if not cell['attr'] and cell['code'] != 0x20:
                     g = game.text_glyph(cell['code'])
@@ -350,9 +368,9 @@ def draw_home(game, enhanced, cv, t=0):
                         ci = CYCLE[((y + t // 40) >> 1) % len(CYCLE)] if enhanced and cell['dh'] else O2C[cell['ink']]
                 cv.put(x, y, ci)
     sel = vis.index(25) * 8                                 # V0: the version line, as DrawVersionLine draws it
-    text(game, cv, '[F1] VERSION', 4 * 8, sel, CYAN, BLACK)
-    text(game, cv, ' CLASSIC ', 17 * 8, sel, BLUE if enhanced else BLACK, BLACK if enhanced else WHITE)
-    text(game, cv, ' ENHANCED ', 27 * 8, sel, BLACK if enhanced else BLUE, WHITE if enhanced else BLACK)
+    text(game, cv, '[F1] VERSION', 3 * 8, sel, CYAN, BLACK)
+    text(game, cv, ' CLASSIC ', 16 * 8, sel, BLUE if enhanced else BLACK, BLACK if enhanced else WHITE)
+    text(game, cv, ' ENHANCED ', 26 * 8, sel, BLACK if enhanced else BLUE, WHITE if enhanced else BLACK)
     if enhanced:                                            # F1: raster bars, scroller on row 23, hopping frog
         for yb in (-3, 17):
             for k in range(2):
@@ -365,7 +383,7 @@ def draw_home(game, enhanced, cv, t=0):
             for py in range(8):
                 if g[py][sx & 7]:
                     cv.put(x, y0 + py, WHITE if py < 3 else LGREY if py < 6 else GREY)
-        draw_frog_sprite(game, cv, 15 * 8, vis.index(19) * 8, 3)
+        draw_frog_sprite(game, cv, 14 * 8, vis.index(19) * 8, 3)
 
 
 # --- figures ------------------------------------------------------------------------------------------------------
@@ -387,7 +405,7 @@ def play_screens(game):
     save(bordered(cv), 'play-classic.png')
     cv = Canvas()
     draw_play(game, ALL, cv)
-    draw_frog_sprite(game, cv, 20 * 8, [r for r in range(28) if r not in PLAY_HIDDEN].index(FROG_ROW) * 8, 0)
+    draw_frog_sprite(game, cv, 19 * 8, [r for r in range(28) if r not in PLAY_HIDDEN].index(FROG_ROW) * 8, 0)
     save(bordered(cv), 'play-enhanced.png')
     detail = cv.img.crop((96, 88, 256, 176)).resize((640, 352), Image.NEAREST)
     save(detail, 'play-detail.png')
@@ -475,8 +493,8 @@ def hop_gif(game):
         draw_play(game, dict(NONE, tex=True, mc=True, frog=True), bot, rows={25, 26})
         e = 1 - (1 - hop) ** 2
         lift = round(math.sin(math.pi * hop) * 5)
-        draw_frog_sprite(game, bot, round((a + (b - a) * e) * 8), y_frog - lift, 3, 0 < hop < 1)
-        crop = (112, y_frog - 8, 224, y_frog + 16)
+        draw_frog_sprite(game, bot, round((a + (b - a) * e - 1) * 8), y_frog - lift, 3, 0 < hop < 1)
+        crop = (104, y_frog - 8, 216, y_frog + 16)
         frame = Image.new('RGB', (112 * 4, 24 * 4 * 2 + 8), PEPTO[DGREY])
         frame.paste(top.img.crop(crop).resize((448, 96), Image.NEAREST), (0, 0))
         frame.paste(bot.img.crop(crop).resize((448, 96), Image.NEAREST), (0, 104))
@@ -485,23 +503,68 @@ def hop_gif(game):
     print('docs/images/enhanced/hop.gif')
 
 
-def smooth_gif(game):
-    """V4: the yellow logs over 4 steps, whole-character steps (today) above per-pixel scrolling."""
-    vis = [r for r in range(28) if r not in PLAY_HIDDEN]
-    y = vis.index(10) * 8
-    lane, n = 2, LANE_FRAMES[2]
-    frames = []
-    for f in range(n * 4):
-        top, bot = Canvas(), Canvas()
-        draw_play(game, NONE, top, offsets={lane: (f // n) * 8 * LANE_DIR[lane]}, rows={10, 11})
-        draw_play(game, NONE, bot, offsets={lane: round(f / n * 8) * LANE_DIR[lane]}, rows={10, 11})
-        frame = Image.new('RGB', (160 * 3, 16 * 3 * 2 + 6), PEPTO[DGREY])
-        frame.paste(top.img.crop((16, y, 176, y + 16)).resize((480, 48), Image.NEAREST), (0, 0))
-        frame.paste(bot.img.crop((16, y, 176, y + 16)).resize((480, 48), Image.NEAREST), (0, 54))
-        frames.append(frame)
-    frames[0].save(os.path.join(OUT, 'smooth-lanes.gif'), save_all=True, append_images=frames[1:],
-                   duration=FRAME_MS, loop=0)
-    print('docs/images/enhanced/smooth-lanes.gif')
+def draw_text_screen(game, rows, hidden, cv):
+    """A text screen (menu, credits) as the port shows it, in game.font."""
+    vis = [r for r in range(28) if r not in hidden]
+    for vy, r in enumerate(vis):
+        for py in range(8):
+            for x in range(320):
+                cell, px = rows[r][min(39, oric_col(x))], x & 7
+                ci = O2C[cell['paper']]
+                if not cell['attr'] and cell['code'] != 0x20:
+                    g = game.text_glyph(cell['code'])
+                    gy = (py + (r & 1) * 8) >> 1 if cell['dh'] else py
+                    if g[gy][px]:
+                        ci = O2C[cell['ink']]
+                cv.put(x, vy * 8 + py, ci)
+
+
+FONTS = (('C64 font (the port today)', None), ('Oric-style, W6', 'W6'), ('Oric-style, NARROW', 'NARROW'))
+
+
+def font_figures(game):
+    """V7 draft: the glyph sheet in the three fonts, and three text screens in each."""
+    c64 = game.font
+    fonts = [(name, c64 if layout is None else oric_font(layout)) for name, layout in FONTS]
+    # the sheet: $20-$7E, 32 to a row, 3x
+    scale, label_h = 3, 18
+    block_h = 3 * 8 * scale + label_h + 10
+    img = Image.new('RGB', (32 * 8 * scale + 20, len(fonts) * block_h + 10), (24, 24, 24))
+    d = ImageDraw.Draw(img)
+    for i, (name, font) in enumerate(fonts):
+        y0 = 10 + i * block_h
+        d.text((10, y0), name, fill=(220, 220, 220))
+        cv = Canvas(32 * 8, 3 * 8, BLACK)
+        for code in range(0x20, 0x7F):
+            k = code - 0x20
+            g = font.get(code)
+            for y in range(8):
+                for x in range(8):
+                    if g and g[y][x]:
+                        cv.put((k % 32) * 8 + x, (k // 32) * 8 + y, LGREY)
+        img.paste(cv.scaled(scale), (10, y0 + label_h))
+    save(img, 'font-sheet.png')
+    # the screens: menu, credits, hi-scores; one row per font
+    screens = ((game.menu, (9, 10, 11)), (game.credits, (4, 8, 9)), (game.home, HOME_HIDDEN))
+    pad = 8
+    out = Image.new('RGB', (3 * (320 + pad) + pad, len(fonts) * (200 + pad + 16) + pad), (24, 24, 24))
+    d = ImageDraw.Draw(out)
+    for i, (name, font) in enumerate(fonts):
+        game.font = font
+        y0 = pad + i * (200 + pad + 16)
+        d.text((pad, y0), name, fill=(220, 220, 220))
+        for j, (rows, hidden) in enumerate(screens):
+            cv = Canvas()
+            draw_text_screen(game, rows, hidden, cv)
+            out.paste(cv.img, (pad + j * (320 + pad), y0 + 16))
+    game.font = c64
+    save(out, 'font-screens.png')
+    # one screen at 2x in the NARROW layout, for a closer look
+    game.font = oric_font('NARROW')
+    cv = Canvas()
+    draw_text_screen(game, game.credits, (4, 8, 9), cv)
+    game.font = c64
+    save(bordered(cv), 'font-credits.png')
 
 
 def main():
@@ -514,7 +577,7 @@ def main():
     lane_sheet(game)
     sprite_sheet(game)
     hop_gif(game)
-    smooth_gif(game)
+    font_figures(game)
 
 
 if __name__ == '__main__':

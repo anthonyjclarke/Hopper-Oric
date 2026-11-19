@@ -51,14 +51,14 @@ colours, the frog keeps its drawing, and the screens keep their text where the g
 | V0 | Version switch on home screen | Front end | Polish   | [The Version Switch](#the-version-switch)    | Built   |
 | V1 | Multicolour lane graphics     | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | V6 | Road markings as raster lines | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
-| V7 | Oric-style font               | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| V7 | Oric-style font               | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | S1 | SID voicing of the AY tunes   | Sound     | Polish   | [enhanced_sound.md](enhanced_sound.md)       | Planned |
 | V2 | Sprite frog with hop arc      | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
 | V3 | Fly sprite                    | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
 | V5 | Water and grass texture       | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
 | F1 | Enhanced attract screen       | Front end | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
 | S2 | SID sound effects             | Sound     | Showcase | [enhanced_sound.md](enhanced_sound.md)       | Planned |
-| V4 | Smooth-scrolling lanes        | Graphics  | Stretch  | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| V4 | Smooth-scrolling lanes        | Graphics  | Stretch  | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | F2 | Hi-scores saved to disk       | Front end | Stretch  | [enhanced_platform.md](enhanced_platform.md) | Planned |
 | S3 | Title tune                    | Sound     | Stretch  | [enhanced_sound.md](enhanced_sound.md)       | Planned |
 
@@ -101,7 +101,7 @@ How the home screen will look once F1 (the attract screen) is built, as mock-ups
 | Input                  | Does                                            |
 |:-----------------------|:------------------------------------------------|
 | F1                     | Flip between Classic and Enhanced               |
-| Joystick left or right | The same                                        |
+| Joystick left or right | The same (home screen only)                     |
 | 1                      | Start a game in the chosen version (unchanged)  |
 | 2                      | Credits and instructions, in the chosen version |
 
@@ -113,12 +113,16 @@ How the home screen will look once F1 (the attract screen) is built, as mock-ups
 - It lasts until power-off. RESTORE, the Oric's RESET, keeps it, as it keeps the hi-scores. With disk hi-scores (F2) it
   is saved with them.
 - A fresh power-up starts in Enhanced (`Start` sets it; an open question below).
+- F1 works on every screen before a game, not only the home screen: the menus, the credits, name entry and the
+  start-up picture. Off the home screen the font change shows the choice; F1 on the picture flips and goes straight to
+  the home screen, so the version line shows it. F1 at the power-up picture starts in Classic.
 
 ```mermaid
 stateDiagram-v2
     direction LR
     Home: Home screen (hi-scores)
     Home --> Home: F1 or joystick, flip and redraw
+    Credits --> Credits: F1, flip
     Home --> Game: 1
     Home --> Credits: 2, or attract timer
     Credits --> Home
@@ -133,8 +137,10 @@ enhancement tests it, and the raster interrupt picks each row's character set an
 memory all the time, so a flip costs one redraw. The details are in
 [enhanced_platform.md](enhanced_platform.md#the-version-flag).
 
-F1 is free on that screen: the game's own keys there are 1 and 2. `RedefineKeys` refuses F1 as a movement key, as it
-refuses P and SPACE. Elsewhere F1 does nothing: the menus ignore it, and name entry ignores every code below `$20`.
+F1 is free on every front-end screen: no game key wait uses it (the menus want digits and letters, and name entry
+ignores every code below `$20`). `Present` takes it out of `ROM_KEY` and flips, so the game never sees it.
+`RedefineKeys` refuses F1 as a movement key, as it refuses P and SPACE. In a game F1 does nothing: the version only
+changes between games.
 
 ---
 
@@ -143,7 +149,7 @@ refuses P and SPACE. Elsewhere F1 does nothing: the menus ignore it, and name en
 1. **Polish:** V0 first, so that every later change is built and checked against Classic from the start. Then V7, V1, V6
    and S1.
 2. **Showcase:** V2, V3, V5, F1 and S2.
-3. **Stretch:** V4, F2 and S3, each optional. V4 starts with a timing study of the lane counters.
+3. **Stretch:** V4 (built), F2 and S3, each optional.
 
 Each step ends with Classic smoke captures that match today's, and Enhanced captures added to the handbook.
 

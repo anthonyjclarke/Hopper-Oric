@@ -18,6 +18,7 @@
         .import key_name_left, key_name_right, key_name_up, key_name_down
         .import DelayXC64, IdleParse
         .export InitInput, ReadKeysC64, ScanRomKey, RedefineKeys
+        .import QuitGameC64
 .ifdef AUTOTEST
         .import testKeys
 .endif
@@ -38,7 +39,14 @@ InitInput:
 ; (key_bits), plus joystick 2. Returns X = $FF as ReadKeys did.
 ;------------------------------------------------------------------------------
 ReadKeysC64:
-        lda     #$FF
+        lda     zRomIrq                 ; in a game (ROM IRQ off): RUN/STOP
+        bne     :+                      ; quits to the hi-score table (Remix)
+        lda     #$7F                    ; column 7, row 7
+        sta     CIA1_PRA
+        lda     CIA1_PRB
+        bmi     :+
+        jmp     QuitGameC64
+:       lda     #$FF
         sta     CIA1_PRA
         lda     CIA1_PRB                ; rows held by joystick 1, not keys
         sta     zJoyIdle

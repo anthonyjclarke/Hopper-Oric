@@ -56,6 +56,7 @@ VICE has none), real key presses and joystick, NTSC timing, the name entry, and 
 | `$3400`–`$7C64` | Platform code, tables, packed start-up picture, BSS            |
 | `$8000`–`$83E7` | VIC screen (bank 2)                                            |
 | `$8800`–`$8FFF` | Enhanced: multicolour lane glyphs ([enhanced.md](enhanced.md)) |
+| `$9000`–`$9722` | Enhanced: smooth-lane tables, Oric-style font, C64 font copy   |
 | `$A000`–`$AFFF` | Double-height character sets (top, bottom)                     |
 | `$B000`–`$B7FF` | `CHARSET`: the game's font, inverse in `$B400`–`$B7FF`         |
 | `$BA00`–`$BAFF` | Hi-score table, as on the Oric                                 |
@@ -108,10 +109,13 @@ scanned by `ScanRow` after each copy, so text printed there with its own colours
 playfield rows are not scanned. Anything else that gains attributes mid-row is found by `ParseNextRow`, which the waits
 run in spare time.
 
-**Columns 0–1.** The copy covers columns 2–39 only. Columns 0 and 1 are drawn by `FastRow` and `ParseRow`, which show
-them as the Oric does: the paper in force at each cell, so on the playfield column 0 is black and column 1 the row's
-paper. (When the copy also wrote them, they showed the row's paper, and every pass of `ParseNextRow` left a black cell
-in column 0 for one frame, which wandered up and down the river.)
+**Columns 0–1 and the margins.** The picture sits one column left of the Oric's: Oric column *c* is VIC column *c*–1,
+so the playfield (columns 2–39) is centred with one column of the row's paper on each side. On the left that is Oric
+column 1, the row's paper attribute; on the right it is VIC column 39, a space nothing writes. Oric column 0, always an
+ink attribute that the Oric shows black, is not shown: drawn in place, it left a black strip and a paper strip on the
+left and none on the right. The copy covers columns 2–39 only; column 1 is drawn by `FastRow` and `ParseRow`, which
+show it as the Oric does. (When the copy also wrote columns 0–1, every pass of `ParseNextRow` left a black cell in
+column 0 for one frame, which wandered up and down the river.)
 
 **Interrupts.** The game masked interrupts for the whole of play (`sei` at `NewGame`) because only the ROM's keyboard
 interrupt was running. Here the raster IRQ must keep running, so that `sei` (and the one in `LoadAYRegs`) are `nop`s and
@@ -189,6 +193,7 @@ envelope; a louder level retriggers the envelope, a softer one lets it decay. Th
 | `make c64-diff`         | Every game byte that differs from the Oric program               |
 | `make c64-smoke`        | Build the scripted test `.prg`, VICE screenshots to `c64/build/` |
 | `make c64-intro`        | Redraw the start-up picture (`c64/src/intro.rle`; Pillow)        |
+| `make c64-font`         | The Enhanced Oric-style font (`c64/src/oricfont.inc`)            |
 | `tools/make_intro.py`   | The start-up picture from the inlay artwork                      |
 | `tools/oric_screens.py` | Print the Oric screens, row by row, from the original code       |
 | `tools/cpu6502.py`      | 6502 core used by `oric_screens.py` (from the Light Cycle repo)  |

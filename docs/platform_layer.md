@@ -34,13 +34,16 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 |:------------------|:-------------------------|:----------------------------------------------------------------------------------|
 | `InitGameC64`     | `$1001` (`NewGame`)      | ROM interrupt off, the game row map, then `InitGame`                              |
 | `RomIrqOn`        | `$20A0` (`InitTimers`)   | The ROM interrupt's jobs back on                                                  |
-| `ReadRomKey`      | the key waits            | Draw now and then (`Idle`), then `lda ROM_KEY`; F1 is held back for `VersionKeys` |
+| `ReadRomKey`      | the key waits            | Draw now and then (`Idle`), then `lda ROM_KEY`; F1 flips (`TakeF1`)               |
 | `ReadMenuKey`     | `$2F61` (`ControlsMenu`) | The same, parsing rows between draws (`IdleParse`)                                |
 | `SoundMenuC64`    | `$0550`                  | The menu row map, then `SoundMenu`                                                |
 | `CreditsIntroC64` | `$2953`                  | The credits row map, then `CreditsIntro`                                          |
-| `HiscoreTableC64` | `$2971`, `$1B51`         | The hi-score row map, the title timer, then `DrawHiScoreTable`                    |
+| `HiscoreTableC64` | `$2971`, `$1B51`, `$1BD2` | The hi-score row map, the title timer, then `DrawHiScoreTable`                   |
 | `TitleTickC64`    | `$2938` (`TitleScroll`)  | `CheckMenuKeys`; after `TITLE_STEPS` steps the picture, then the attract loop     |
 | `VersionKeys`     | from `TitleTickC64`      | F1 or joystick left/right: flip `zEnhanced`, restart the timer                    |
+| `TakeF1`          | from `Present`           | F1 on any front-end screen: take it out of `ROM_KEY`, then `FlipVersion`          |
+| `FlipVersion`     | `TakeF1`, `VersionKeys`  | Invert `zEnhanced`, change the font (`SetFontC64`), set `versionReq`              |
+| `QuitGameC64`     | from `ReadKeysC64`       | RUN/STOP in a game: reset the stack, `SilenceAll`, then `GameOver`                |
 | `DrawVersionLine` | from `TitleTickC64`      | The version line, row 25 of the hi-score screen ([enhanced.md](enhanced.md))      |
 | `EraseFlyC64`     | `$2A1B` (`EraseFly`)     | Erase the fly; with no fly, write to `tmp0` / `key_state`, not the 6510 port      |
 | `RedefineKeys`    | `$2F91` (`ControlsMenu`) | Choice 2: ask for the four keys                                                   |
@@ -65,9 +68,10 @@ C64 cycle stands for one Oric microsecond.
 | `IrqHandler`    | The raster interrupt (below)                                                                                                                                                                                        |
 | `NmiEntry`      | RESTORE: `jmp NMI_VECTOR`, the Oric's RESET path                                                                                                                                                                    |
 
-**The raster interrupt.** An interrupt at the last line of each text row (`RowLine`) sets `$D021` and `$D018` for the
-next row from `rowPaper` and `rowCset` as they are at that moment, so a row that `Present` recolours or turns double
-height mid-frame is shown right in that frame. The frame interrupt at line
+**The raster interrupt.** An interrupt at the last line of each text row (`RowLine`) sets `$D016`, `$D021` and `$D018`
+for the next row from `rowCtl2`, `rowPaper` and `rowCset` as they are at that moment, so a row that `Present` recolours
+or turns double height mid-frame is shown right in that frame. `rowCtl2` is `$08` but in Enhanced play, where it adds
+multicolour and the lanes' fine scroll (V4, [enhanced_platform.md](enhanced_platform.md#raster-interrupt)). The frame interrupt at line
 `FRAME_IRQ_LINE` sets row 0's, counts `zTick`, flips the blink phase every 16 frames, and runs the Oric ROM interrupt's
 jobs while `zRomIrq` is set: `ScanRomKey` and `CursorBlink`.
 
@@ -100,7 +104,7 @@ The row maps hide the three rows each screen leaves blank: menus 9–11, credits
 | Routine        | Does                                                                                                        |
 |:---------------|:------------------------------------------------------------------------------------------------------------|
 | `InitInput`    | CIA1 port A out (columns), port B in (rows)                                                                 |
-| `ReadKeysC64`  | The Oric's `ReadKeys`: `key_state` from `key_rows` / `key_cols` / `key_bits`, plus joystick 2 (`JoyToKeys`) |
+| `ReadKeysC64`  | The Oric's `ReadKeys`: `key_state` from `key_rows` / `key_cols` / `key_bits`, plus joystick 2 (`JoyToKeys`); in a game, RUN/STOP goes to `QuitGameC64` |
 | `ScanRomKey`   | From the frame interrupt: a newly pressed key into `ROM_KEY` as ASCII + `$80` (`KeyAscii`); F1 is `KEY_F1`  |
 | `RedefineKeys` | Controls choice 2: prompts under the menu, fills `keys_set2` and the key names                              |
 | `WaitNoKeys`   | Before each prompt: wait until no key has been down for `RELEASE_FRAMES` frames                             |

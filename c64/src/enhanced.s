@@ -18,10 +18,136 @@
 
         .include "c64.inc"
 
-        .import rowMap, rowCset, curMap
-        .export McRowSetup, McBuild, McDynamic, rowMc1, rowMc2, mcStale
+        .import rowMap, rowCset, curMap, RefreshCharsets, lane_speeds
+        .export KeepC64Font, SetFontC64, McRowSetup, McBuild, McDynamic, rowMc1, rowMc2, mcStale
+        .export FineRow, rowCtl2
 
         .segment "CODE"
+
+;------------------------------------------------------------------------------
+; V4, smooth-scrolling lanes (docs/enhanced_graphics.md). The game still
+; steps each lane one character when its lane_timer reaches its speed in
+; lane_speeds; between steps each lane row is shifted 0-7 pixels with the
+; $D016 fine scroll, so the step lands where the scroll had got to. The
+; offset is round(timer * 8 / speed) (FineTab), counted down from 7 for the
+; lanes that move left (XSCROLL only shifts right).
+;
+; FineRow - X = C64 row (kept): A = its $D016 value in Enhanced play,
+; multicolour on, plus the row's offset if it shows a lane. Present takes it
+; just before copying the row and stores it in rowCtl2 just after, so the
+; raster IRQ never pairs a new offset with old characters for long. A road
+; lane the frog stands in is not shifted: the frog is drawn in the lane's
+; characters and would slide with the traffic.
+;------------------------------------------------------------------------------
+FineRow:
+        lda     rowCset,x               ; only rows showing a lane (McRowSetup:
+        cmp     #CS_MC                  ; not the sheet-start signs)
+        bne     @none
+        ldy     rowMap,x
+        lda     RowLane,y               ; Oric row -> lane, or $FF
+        bmi     @none
+        tay
+        cpy     #3                      ; road lanes 0-2 are frog_row 1-3
+        bcs     @go
+        adc     #1                      ; (C = 0)
+        cmp     frog_row
+        beq     @none
+@go:    lda     lane_speeds,y
+        asl     a
+        asl     a
+        asl     a
+        asl     a
+        sta     zTmp2
+        lda     lane_timer,y
+        and     #$0F
+        ora     zTmp2
+        sty     zTmp2
+        tay
+        lda     FineTab,y
+        ldy     zTmp2
+        eor     LaneLeft,y              ; left lanes: 7 - offset
+        ora     #$18                    ; multicolour, 40 columns
+        rts
+@none:  lda     #$18
+        rts
+
+;------------------------------------------------------------------------------
+; V7, the Oric-style font (docs/enhanced_graphics.md): drawn as text art in
+; tools/oric_style_font.py, which writes oricfont.inc (W6 layout).
+;
+; KeepC64Font - from BuildFont (at start-up, interrupts masked): copy the C64
+; font it just built into C64FontCopy, so a later flip needs neither the
+; character ROM nor masked interrupts, then fall into SetFont.
+;
+; SetFont - the font of the version chosen (zEnhanced) into CHARSET codes
+; $20-$7F: OricFontW6 or C64FontCopy. About 13,000 cycles.
+;------------------------------------------------------------------------------
+KeepC64Font:
+        ldx     #0
+:       lda     CHARSET+$20*8,x
+        sta     C64FontCopy,x
+        lda     CHARSET+$20*8+$100,x
+        sta     C64FontCopy+$100,x
+        lda     CHARSET+$20*8+$200,x
+        sta     C64FontCopy+$200,x
+        inx
+        bne     :-
+SetFont:
+        lda     #<C64FontCopy
+        ldy     #>C64FontCopy
+        bit     zEnhanced
+        bpl     :+
+        lda     #<OricFontW6
+        ldy     #>OricFontW6
+:       sta     zSrc
+        sty     zSrc+1
+        lda     #<(CHARSET+$20*8)
+        sta     zDst
+        lda     #>(CHARSET+$20*8)
+        sta     zDst+1
+        ldx     #3                      ; 3 pages: codes $20-$7F
+        ldy     #0
+:       lda     (zSrc),y
+        sta     (zDst),y
+        iny
+        bne     :-
+        inc     zSrc+1
+        inc     zDst+1
+        dex
+        bne     :-
+        rts
+
+;------------------------------------------------------------------------------
+; SetFontC64 - after a flip on the home screen: the font of the version now
+; chosen into CHARSET, into the game's own copy at FONT_SAVE (ColdStart saved
+; it there; RestoreCharset puts it back for the menus), and into the inverse
+; and double-height sets, with the screen blanked meanwhile (a few frames).
+; About 75,000 cycles, interrupts on.
+;------------------------------------------------------------------------------
+FONT_SAVE       = $3100                 ; the game's copy of codes $20-$7F
+
+SetFontC64:
+        lda     VIC_CTRL1               ; screen off while the sets change, so
+        and     #%01101111              ; no frame shows them half rebuilt. Bit 7
+        sta     VIC_CTRL1               ; reads as the raster's bit 8 but writes
+                                        ; the IRQ line's: keep it 0, or the
+                                        ; raster IRQ never fires again
+        jsr     SetFont
+        ldx     #0
+:       lda     CHARSET+$20*8,x
+        sta     FONT_SAVE,x
+        lda     CHARSET+$20*8+$100,x
+        sta     FONT_SAVE+$100,x
+        lda     CHARSET+$20*8+$200,x
+        sta     FONT_SAVE+$200,x
+        inx
+        bne     :-
+        jsr     RefreshCharsets
+        lda     VIC_CTRL1
+        and     #%01111111              ; (as above)
+        ora     #%00010000
+        sta     VIC_CTRL1
+        rts
 
 ;------------------------------------------------------------------------------
 ; McRowSetup - for FastRow / ParseRow: A = the C64 ink of simple row X.
@@ -307,6 +433,8 @@ McChar:
 
         .segment "RODATA"
 
+
+
 HEDGE_CODE      = $7F
 
 ; 1 for the codes on the top row of a lane (logs $60-$62, turtles $6E-$70,
@@ -368,6 +496,7 @@ DYN_SENTINELS = * - DynCodes
 DYN_COUNT = * - DynCodes
 
         .segment "BSS"
+rowCtl2:        .res C64_ROWS   ; V4: $D016 per row, for the raster IRQ
 McPairs:        .res 256        ; McInit
 McFull:         .res 256
 mcStale:        .res 1          ; set by SetRowMap: build the set before use
@@ -381,3 +510,32 @@ mcFrog:         .res 32         ; the frog's glyphs at the last conversion
 mcSlow:         .res 1          ; passes until the slow list
 rowMc1:         .res C64_ROWS   ; $D022 per C64 row (read by the raster IRQ)
 rowMc2:         .res C64_ROWS   ; $D023
+
+        .segment "HIDATA"               ; $9000-$9FFF (c64.cfg)
+; V4: the lane shown on each Oric row (the game's lane index: 0 is row 23,
+; 6 is row 4), and 7 for the lanes that move left.
+RowLane:
+        .byte   $FF,$FF,$FF,$FF,6,6,$FF,5,5,$FF,4,4,$FF,3
+        .byte   3,$FF,$FF,2,2,$FF,1,1,$FF,0,0,$FF,$FF,$FF
+LaneLeft:
+        .byte   7,0,7,7,0,7,0           ; rows 23, 20, 17, 13, 10, 7, 4
+; round(timer * 8 / speed), indexed speed * 16 + timer
+FineTab:
+        .byte   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0  ; speed 0
+        .byte   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0  ; speed 1
+        .byte   0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0  ; speed 2
+        .byte   0,3,5,0,0,0,0,0,0,0,0,0,0,0,0,0  ; speed 3
+        .byte   0,2,4,6,0,0,0,0,0,0,0,0,0,0,0,0  ; speed 4
+        .byte   0,2,3,5,6,0,0,0,0,0,0,0,0,0,0,0  ; speed 5
+        .byte   0,1,3,4,5,7,0,0,0,0,0,0,0,0,0,0  ; speed 6
+        .byte   0,1,2,3,5,6,7,0,0,0,0,0,0,0,0,0  ; speed 7
+        .byte   0,1,2,3,4,5,6,7,0,0,0,0,0,0,0,0  ; speed 8
+        .byte   0,1,2,3,4,4,5,6,7,0,0,0,0,0,0,0  ; speed 9
+        .byte   0,1,2,2,3,4,5,6,6,7,0,0,0,0,0,0  ; speed 10
+        .byte   0,1,1,2,3,4,4,5,6,7,7,0,0,0,0,0  ; speed 11
+        .byte   0,1,1,2,3,3,4,5,5,6,7,7,0,0,0,0  ; speed 12
+        .byte   0,1,1,2,2,3,4,4,5,6,6,7,7,0,0,0  ; speed 13
+        .byte   0,1,1,2,2,3,3,4,5,5,6,6,7,7,0,0  ; speed 14
+        .byte   0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,0  ; speed 15
+        .include "oricfont.inc"
+C64FontCopy:    .res 96 * 8             ; KeepC64Font: the C64 font, codes $20-$7F

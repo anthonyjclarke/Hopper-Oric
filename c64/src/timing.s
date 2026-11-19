@@ -19,7 +19,7 @@
         .include "c64.inc"
 
         .import Present, ParseNextRow, ScanRomKey, ServiceTimer, CheckMenuKeys
-        .import rowPaper, rowCset, rowMc1, rowMc2
+        .import rowPaper, rowCset, rowMc1, rowMc2, rowCtl2
         .export InitTiming, ReadClock, WaitCycles, DelayXC64, FrameDelayC64, T2Check, Idle, IdleParse
         .export AttractWait
 .ifdef AUTOTEST
@@ -432,8 +432,8 @@ IdleParse:
 ; rowPaper / rowCset; the bottom-border IRQ sets row 0 and does the
 ; per-frame jobs.
 ;------------------------------------------------------------------------------
-EV_DELAY_PAL    = 3
-EV_DELAY_NTSC   = 3
+EV_DELAY_PAL    = 1                     ; 4 cycles (was 3 before V4 loaded
+EV_DELAY_NTSC   = 1                     ; $D016 ahead of the delay)
 
 IrqHandler:
         pha
@@ -447,13 +447,16 @@ IrqHandler:
         lda     D018Table,y
         tay
         lda     rowPaper,x
-        nop                             ; store lands where it did with the old event lists
+        sta     @paper+1
+        lda     rowCtl2,x               ; multicolour and V4's fine scroll
         ldx     evDelay
 @dly:   dex
         bne     @dly
-        sta     VIC_BG0
-        sty     VIC_MEMSETUP
-        ldx     evIdx
+        sta     VIC_CTRL2               ; in the right border of the row
+@paper: lda     #0                      ; above's last line, 4 cycles before
+        sta     VIC_BG0                 ; $D021 (2 later than with the old
+        sty     VIC_MEMSETUP            ; event lists): the row's first line
+        ldx     evIdx                   ; is a badline, too late for $D016
         lda     zMcPlay                 ; Enhanced play: multicolour shade
         beq     :+                      ; and highlight (only multicolour
         lda     rowMc1,x                ; cells use them; skipped otherwise)
@@ -502,10 +505,8 @@ IrqHandler:
         sta     VIC_BG1
         lda     rowMc2
         sta     VIC_BG2
-        lda     zMcPlay                 ; Enhanced play: multicolour text mode
-        and     #$10                    ; (cells with colour RAM below 8 stay hires)
-        ora     #$08
-        sta     VIC_CTRL2
+        lda     rowCtl2                 ; Enhanced play: multicolour text mode
+        sta     VIC_CTRL2               ; (cells with colour RAM below 8 stay hires)
         inc     zTick
         dec     blinkCount
         bne     :+

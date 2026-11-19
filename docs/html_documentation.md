@@ -68,11 +68,12 @@ regenerates it whenever a source changes. `just docs-graphics` and `just docs-sc
   envelope shapes for `oric_specs.md`. It reads nothing from the game, so the file is the same in every Oric reconstruction.
 - **Oric appendix screenshot.** `oric-basic-hires.png` is a capture of `oric_specs.md`'s HIRES BASIC example running in the
   Auric emulator on the Atmos ROM; it is not generated, so re-render it by hand if the example changes.
-- **C64 Enhanced mock-ups.** `render_enhanced.py` draws the pictures in the C64 Enhanced chapters. The Enhanced version
-  is planned, not built, so these are mock-ups: the screens are the game's own (drawn on the 6502 core, as above), shown
-  the way the port shows them (rows hidden, glyphs widened to 8 pixels, the C64 font, the Pepto palette), with each
-  planned change applied as the chapters describe it. It also writes the two animations, `hop.gif` and
-  `smooth-lanes.gif`. When a change is built, a VICE capture replaces its mock-up.
+- **C64 Enhanced mock-ups.** `render_enhanced.py` draws the pictures of the planned changes in the C64 Enhanced
+  chapters: the screens are the game's own (drawn on the 6502 core, as above), shown the way the port shows them (rows
+  hidden, glyphs widened to 8 pixels, the C64 font, the Pepto palette), with each planned change applied as the chapters
+  describe it. It also writes the `hop.gif` animation and the font figures, from `tools/oric_style_font.py`. When a
+  change is built, a VICE capture replaces its mock-up: `capture_screens.py` records `enh-smooth.gif` (V4) one frame per
+  VICE run.
 - **The start-up picture's design.** `tools/make_intro.py` writes `docs/images/graphics/intro-design.png` with
   `c64/src/intro.rle` (`make c64-intro`).
 

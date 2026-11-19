@@ -12,6 +12,7 @@
 #   make c64-diff   list every game byte that differs from the Oric program
 #   make c64-smoke  boot headless in VICE, screenshots to c64/build/
 #   make c64-intro  redraw the start-up picture (c64/src/intro.rle; Pillow)
+#   make c64-font   the Enhanced Oric-style font (c64/src/oricfont.inc) from tools/oric_style_font.py
 
 CA65  ?= ca65
 LD65  ?= ld65
@@ -78,6 +79,10 @@ $(C64_BLD)/intro.o $(C64_BLD)/test/intro.o $(C64_BLD)/test-enhanced/intro.o: $(C
 c64-intro:
 	$(IMG_PY) tools/make_intro.py
 
+# The Oric-style font of the Enhanced version (V7) from its text art
+c64-font:
+	python3 tools/oric_style_font.py
+
 c64-d64: $(C64_PRG)
 	$(C1541) -format "hopper,hp" d64 $(C64_BLD)/hopper.d64 -write $(C64_PRG) "hopper" >/dev/null
 
@@ -119,4 +124,4 @@ c64-smoke: $(C64_TPRG) $(C64_EPRG) $(C64_PRG)
 	python3 tools/c64_screens.py --out $(C64_BLD)
 	python3 tools/c64_screens.py --out $(C64_BLD) --only intro
 
-.PHONY: all verify run debug regen clean c64 c64-d64 c64-run c64-diff c64-smoke c64-intro
+.PHONY: all verify run debug regen clean c64 c64-d64 c64-run c64-diff c64-smoke c64-intro c64-font

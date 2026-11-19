@@ -87,6 +87,8 @@ paper.
 
 ## V2 – Sprite Frog with Hop Arc
 
+**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
+
 **What changes.** The frog becomes a sprite: a multicolour body (green, light green, yellow) with a hires black outline
 sprite laid over it, so it stands out on the green verge and the yellow median. A hop is no longer an instant two-column
 jump. Over about 140 ms the frog glides to its new place on a low arc, stretched by a row in mid-air. Death shows the
@@ -112,6 +114,8 @@ The frog never shares a row with more than one other sprite (the fly is in the h
 
 ## V3 – Fly Sprite
 
+**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
+
 **What changes.** The fly in a home flaps its wings (two frames) and bobs by a pixel. It appears where the game draws
 its fly character, from `fly_ptr`, and goes when `fly_on` clears. The fly character stays on the screen for the game to
 read.
@@ -119,6 +123,8 @@ read.
 ---
 
 ## V5 – Water and Grass Texture
+
+**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
 
 **What changes.** The river's empty water shows sparse light-blue ripples. The verges (the yellow median and the green
 start) show small tufts. The ripples belong to the lane they are in, so they drift with the logs and turtles, and the
@@ -148,18 +154,48 @@ which use the same rows, are left alone. The `enh-play` capture under V1 shows t
 
 ## V7 – Oric-Style Font
 
-**What changes.** The port shows text in the C64 font, because the Oric ROM font isn't on the tape
-([porting.md](porting.md#known-differences)). Enhanced uses a new font drawn in the style of the Oric's: narrow letters,
-6 pixels of design inside the 8-pixel cell, as the game's own glyphs are widened. The status line, menus, credits and
-signs then read like the original.
+**Built** (`W6` layout), checked in VICE. The port shows text in the C64 font, because the Oric ROM font isn't on the
+tape ([porting.md](porting.md#known-differences)). Enhanced uses a font drawn in the manner of the Oric's text: a 5 × 7
+design with single-pixel strokes in a 6-pixel cell, the left column as the gap, and lower case with descenders in row 7.
+It is drawn for this project, not copied from the Oric ROM. It covers every screen's text: the menus, the redefine
+prompts, the credits, the hi-score table and title, the signs and the status line.
 
-**How it is shown.** `BuildFont` writes the new font into `CHARSET` instead of copying the C64 character ROM. It costs
-no extra memory. The font is drawn for this project, not copied from the Oric ROM. Its design isn't made yet, so it has
-no figure here.
+![VICE: the controls menu and redefine prompts in Enhanced](images/screens/redefine.png)
+
+![VICE: the hi-score screen in Enhanced](images/screens/hiscores.png)
+
+The glyphs are text art in `tools/oric_style_font.py` (`#` set, `.` clear), one block per ASCII code `$20`–`$7F`, so
+they can be edited in any editor. `make c64-font` writes `c64/src/oricfont.inc` from it.
+
+![The C64 font, and the Oric-style font in its two layouts (3×)](images/enhanced/font-sheet.png)
+
+**Layout.** The 6-pixel cell has to fill the C64's 8 pixels. Two ways were drawn for review, and `W6` was chosen:
+
+| Layout   | How                                                     | Looks                                          |
+|:---------|:--------------------------------------------------------|:-----------------------------------------------|
+| `W6`     | The two middle pixels doubled, as the game's glyphs are | Matches the game's graphics; M, W, A lean left |
+| `NARROW` | The 6 pixels as drawn, a blank column each side         | Crisper; not used                              |
+
+![Mock-up: the menu, credits and hi-score screens in each font](images/enhanced/font-screens.png)
+
+**Readability.** Single-pixel strokes in the C64's dark blue and red are harder to read on black than the C64 font's
+two-pixel strokes (the blue instruction lines on the credits). This is accepted for now, as the Oric looked: the
+alternatives, if it proves a problem on a real screen, are to thicken the vertical strokes for those inks only or to
+keep the C64 font for blue and red text.
+
+**How it is shown.** `BuildFont` builds the C64 font at start-up as before, then `KeepC64Font` copies it to
+`C64FontCopy` and `SetFont` puts the font of the chosen version into `CHARSET` codes `$20`–`$7F`. `ColdStart` then saves
+that to `$3100` as usual, and `RestoreCharset` brings it back for every menu. A flip on the home screen calls
+`SetFontC64`: the screen is blanked, `SetFont` copies the other font in (from RAM, so the character ROM needn't be
+banked in and interrupts stay on), the copy at `$3100` is updated, `RefreshCharsets` rebuilds the inverse and
+double-height sets, and the screen comes back, a couple of frames later. The font data (768 bytes) and the C64 copy (768
+bytes) are at `$9000`–`$95FF` ([enhanced_platform.md](enhanced_platform.md#memory)).
 
 ---
 
 ## F1 – Enhanced Attract Screen
+
+**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
 
 **What changes.** On the home screen ([enhanced.md](enhanced.md#the-version-switch)) the double-height title takes a
 colour cycle, one colour per raster line pair, with thin raster bars above and below it. A sprite frog hops along the
@@ -174,20 +210,27 @@ The frog reuses the V2 sprites.
 
 ## V4 – Smooth-Scrolling Lanes
 
-**What changes.** Lanes move pixel by pixel instead of eight pixels at a time. The game still moves each lane one
-character per step. Between steps, each row is offset by 0–7 pixels with `$D016`, so the step lands where the scroll has
-already reached.
+**Built** (`FineRow` in `c64/src/enhanced.s`), checked in VICE. Logs, turtles and traffic glide a pixel or two a frame
+instead of jumping eight pixels at a time. The game still moves each lane one character per step; between steps each
+lane row is shifted 0–7 pixels with the `$D016` fine scroll, so the step lands where the scroll had got to.
 
-![The yellow logs over four steps: whole characters (top) and smooth (bottom)](images/enhanced/smooth-lanes.gif)
+![VICE: the river in Enhanced over 32 frames](images/screens/enh-smooth.gif)
 
-**How it is shown.** Each lane steps every few frames (`lane_speeds`). The raster interrupt sets each lane row's fine
-scroll from how far that lane is through its current wait. A lane that moves left counts down from 7 and one that moves
-right counts up. The frog sprite on a log takes the same offset.
+**How it is shown.** The study turned out simple: each pass of `MainLoop` counts every lane's `lane_timer` up to its
+speed in `lane_speeds`, then steps the lane and sets the timer to 0. So the offset is the timer's share of the wait,
+round(timer × 8 / speed), from a 256-byte table (`FineTab`, speed × 16 + timer); the sheet speed-ups need nothing
+extra, since they only lower `lane_speeds`. `XSCROLL` only shifts right, so a lane that moves left counts down from 7
+instead of up from 0 (`LaneLeft`). `Present` works out each lane row's `$D016` value just before it copies the row and
+stores it in `rowCtl2` just after, so the characters and the offset change together; the raster interrupt writes
+`rowCtl2` for every row.
 
-**Why it is a stretch.** The interrupt has to know when each lane will step next, which needs a study of the lane
-counters and of the sheets that speed them up. The 38-column mode can't hide the ragged edge, because column 39 is
-playfield, so the edge needs masking with sprites or a fixed blank column. If the step and the offset ever disagree, the
-lane jitters, which looks worse than the port. If the study shows it can't be done cleanly, it is dropped.
+**The frog.** On the river the frog is carried by its log or turtle, so it glides with it. On the road the frog is
+drawn in the lane's own characters but doesn't move with the traffic, so the road lane the frog is in isn't shifted
+(`frog_row`): it steps by whole characters while the frog is there, and its traffic jumps by up to 7 pixels as the frog
+hops in or out. A sprite frog (V2) would remove that.
+
+**The edges.** The shifted rows push up to 7 pixels into the margin on the right and leave the row's paper on the left.
+The margins are the row's paper anyway ([porting.md](porting.md#decisions)), so nothing ragged shows.
 
 ---
 

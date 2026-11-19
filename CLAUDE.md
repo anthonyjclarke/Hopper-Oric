@@ -50,8 +50,10 @@ Reconstructed source of P.S.S.'s HOPPER (1983), v1.0 = byte-identical to
   row's paper and charset. Platform zero page is `$60-$CF` (`zp.s`).
 - Chars `$3A-$3D` are the frog, also in the credits text: don't show them as
   text (RedefineKeys refuses `:` `;` `=`).
-- `CopyRows` copies columns 2-39 only; columns 0-1 belong to `FastRow` /
-  `ParseRow` (both must draw them the same way, or col 0 flickers).
+- The VIC picture is one column left: Oric col c -> VIC col c-1 (`rowDst`,
+  `rowCol` are row start - 1). Oric col 0 is never written (it would land on
+  the row above's col 39, the right margin). `CopyRows` copies cols 2-39;
+  col 1 belongs to `FastRow` / `ParseRow` (both must draw it the same way).
 - Rows with attributes past column 1 get colour only from a row parse. Plain
   `Idle` never parses: `CheckMenuKeys` runs in counted loops and would slow.
   Uncounted waits that draw such text use `IdleParse`.
@@ -59,5 +61,8 @@ Reconstructed source of P.S.S.'s HOPPER (1983), v1.0 = byte-identical to
   from `docs/images/original/cover.png` (a straight scan) and `inlay.png`.
   Unpacked once into VIC bank 3 (`$C000`, `$C400` colour copy, `$E000`
   bitmap): keep bank 3 free. `ShowPicture` runs with IRQs masked.
+- Main memory below `$8000` is nearly full (BSS ends ~`$7E3E`): put new
+  tables in `HIDATA` (`$9000`+, not VIC-visible). The row IRQ's `$D016`
+  store must stay before `$D021` (a later one misses the badline).
 - Test with `make c64-smoke` (scripted keys, `c64/src/autotest.s`); headless
   VICE has no sound.

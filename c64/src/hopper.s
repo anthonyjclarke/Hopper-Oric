@@ -35,6 +35,7 @@
         .export keys_set2, key_name_left, key_name_right, key_name_up, key_name_down
         .export ControlsWaitKey, AttractLoop, StartGame
         .export StepFrog, LoseLife, L118A
+        .export GameOver, SilenceAll, HiscoreScreen, lane_speeds
 
         .segment "GAME"
 PROG_START:
@@ -3507,7 +3508,7 @@ ShowHiScores:
         nop                             ; 1BCB  C64: was sei (SetRowMap runs next)
         jsr     ClearScreen             ; 1BCC
         jsr     DrawTitleBar            ; 1BCF
-        jsr     DrawHiScoreTable        ; 1BD2
+        jsr     HiscoreTableC64         ; 1BD2  C64: hi-score rows
         ldx     #$4F                    ; 1BD5
 L1BD7:
         lda     #$20                    ; 1BD7
@@ -4697,6 +4698,7 @@ L2956:
         nop                             ; 2968  C64: pad (was the counting loop)
         nop                             ; 2969  C64: pad (was the counting loop)
         nop                             ; 296A  C64: pad (was the counting loop)
+HiscoreScreen:                          ; C64: label only (F1 on the picture)
         jsr     ClearScreen             ; 296B
 BadTarget_296D := * - 1          ; 296D: target inside instruction above
         jsr     DrawTitleBar            ; 296E

@@ -11,16 +11,18 @@
         .include "c64.inc"
 
         .import UnpackPicture, ShowPicture
+        .import SetFontC64
         .import InitVideo, InitTiming, InitInput, InitSound, SetRowMap, Idle, IdleParse
         .import ColdStart, InitGame, SoundMenu, CreditsIntro, DrawHiScoreTable
         .import CheckMenuKeys, AttractLoop, StartGame
         .import StepFrog, LoseLife, L118A
+        .import GameOver, SilenceAll, HiscoreScreen
         .import PROG_START, PROG_END
         .import __GAME_LOAD__, __GAME_RUN__, __GAME_SIZE__, __BSS_RUN__, __BSS_SIZE__
         .export Start
         .export InitGameC64, RomIrqOn, ReadRomKey, ReadMenuKey
         .export SoundMenuC64, CreditsIntroC64, HiscoreTableC64, TitleTickC64, EraseFlyC64
-        .export StepFrogC64, CarryFrogC64
+        .export StepFrogC64, CarryFrogC64, TakeF1, QuitGameC64
 
         .assert PROG_START = $0500, error, "the game must run at $0500"
         .assert PROG_END = $30D5, error, "the game must end at $30D4"
@@ -115,6 +117,11 @@ Start:
         jsr     UnpackPicture           ; into bank 3, kept for the attract loop
 .ifndef AUTOTEST
         jsr     ShowPicture             ; the start-up picture (intro.s)
+        cmp     #PIC_F1                 ; F1 there: start in Classic
+        bne     :+
+        lda     #0
+        sta     zEnhanced
+:
 .endif
         jsr     InitVideo
         jsr     InitInput
@@ -221,19 +228,49 @@ RomIrqOn:
         rts
 
 ; The four key-wait loops: draw the screen now and then, then lda ROM_KEY.
-; F1 is taken out here and kept for VersionKeys (versionReq): an F1 that
-; arrived while Idle drew would otherwise reach CheckMenuKeys, which drops
-; any key it doesn't know. The game's key waits never see F1.
+; F1 flips the version here (Present catches most of them, this the F1
+; that arrives just after): the game's key waits never see F1.
 ReadRomKey:
         jsr     Idle
         lda     ROM_KEY
         cmp     #KEY_F1 | $80
         bne     :+
-        sta     versionReq
-        lda     #0
-        sta     ROM_KEY
+        jsr     TakeF1
 :       lda     ROM_KEY                 ; the callers branch on these flags
         rts
+
+;------------------------------------------------------------------------------
+; TakeF1 - F1 in ROM_KEY on a front-end screen: take it out and flip the
+; version. Called by Present (every screen while the ROM IRQ is on: menus,
+; credits, hi-scores, name entry) and ReadRomKey. Clobbers A, X, Y and the
+; video temporaries, as Present does.
+; FlipVersion - flip zEnhanced and the font with it; versionReq tells the
+; hi-score screen to redraw its version line.
+;------------------------------------------------------------------------------
+TakeF1:
+        lda     #0
+        sta     ROM_KEY
+FlipVersion:
+        lda     zEnhanced
+        eor     #$FF
+        sta     zEnhanced
+        lda     #1
+        sta     versionReq
+        jmp     SetFontC64              ; V7: the font goes with the version
+
+;------------------------------------------------------------------------------
+; QuitGameC64 - RUN/STOP in play (C64 Remix): end the game as if the last
+; life were lost, without the death: GAME OVER, the hi-score check (the score
+; so far counts), the hi-score table. ReadKeysC64 jumps here from the game's
+; key reads (play and pause); the game never returns from GameOver, so the
+; stack is reset.
+;------------------------------------------------------------------------------
+QuitGameC64:
+        ldx     #$FF
+        txs
+        jsr     SilenceAll
+        cli
+        jmp     GameOver
 
 ; The controls menu's key wait: as ReadRomKey, parsing rows in between.
 ReadMenuKey:
@@ -255,7 +292,7 @@ HiscoreTableC64:
         lda     #0                      ; TitleTickC64 times the table from here
         sta     titleSteps
         sta     titleSteps+1
-        sta     versionReq              ; an F1 from another screen doesn't count
+        sta     versionReq              ; the first tick draws the line anyway
         lda     #MAP_HISCORE
         jsr     SetRowMap
         jmp     DrawHiScoreTable
@@ -297,26 +334,28 @@ TitleTickC64:
         sta     zLastKey
         cli
         txa
-        beq     :+
+        beq     @attract
+        cmp     #PIC_F1
+        beq     @f1
         jmp     StartGame
-:       jmp     AttractLoop
+@attract:
+        jmp     AttractLoop
+@f1:    jsr     FlipVersion             ; F1: flip, and show the choice
+        jmp     HiscoreScreen
 
 ;------------------------------------------------------------------------------
-; VersionKeys - on the home screen: F1 (in ROM_KEY as KEY_F1, or held back
-; in versionReq by ReadRomKey) or a new push of
-; joystick 2 left or right flips zEnhanced, redraws the version line and
-; restarts the attract timer, so the screen stays while the player chooses.
+; VersionKeys - on the home screen: F1 (flipped already by Present or
+; ReadRomKey, which set versionReq, or still in ROM_KEY) or a new push of
+; joystick 2 left or right flips zEnhanced; then the version line is redrawn
+; and the attract timer restarts, so the screen stays while the player
+; chooses.
 ;------------------------------------------------------------------------------
 VersionKeys:
-        lda     versionReq              ; F1 held back by ReadRomKey
-        bne     @f1
         lda     ROM_KEY
         cmp     #KEY_F1 | $80
         bne     @joy
-@f1:    lda     #0
-        sta     versionReq
-        sta     ROM_KEY
-        beq     @flip
+        jsr     TakeF1
+        jmp     @shown
 @joy:   lda     CIA1_PRA                ; joystick 2, low = pushed
         eor     #$FF
         and     #$0C                    ; left or right
@@ -325,10 +364,12 @@ VersionKeys:
         stx     joyLR
         and     joyLR                   ; and pushed now: a new push
         bne     @flip
+        lda     versionReq              ; flipped by F1 elsewhere
+        bne     @shown
         rts
-@flip:  lda     zEnhanced
-        eor     #$FF
-        sta     zEnhanced
+@flip:  jsr     FlipVersion
+@shown: lda     #0
+        sta     versionReq
         lda     #1                      ; restart the timer (not 0: that redraws)
         sta     titleSteps
         lda     #0
@@ -371,5 +412,5 @@ VersionText:
 
         .segment "BSS"
 joyLR:          .res 1
-versionReq:     .res 1          ; F1 seen by ReadRomKey, for VersionKeys
+versionReq:     .res 1          ; flipped since the version line was drawn
 titleSteps:     .res 2

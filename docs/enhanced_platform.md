@@ -21,15 +21,20 @@ the switch:
 
 1. On the screen's first tick (`titleSteps` still 0) it calls `DrawVersionLine`. The line is drawn there and not in
    `HiscoreTableC64`, because the name entry screen also draws the table, and doesn't show the line.
-2. Before `CheckMenuKeys`, `VersionKeys` looks for F1 or a new push of the joystick left or right. `ScanRomKey` reports
-   F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like any other key, so a held F1 flips once. The joystick is
-   edge-detected in `joyLR`. `CheckMenuKeys` draws a frame (`ReadRomKey` calls `Idle`) before it reads the key, and
-   drops any key it doesn't know, so an F1 arriving during that frame would be lost. `ReadRomKey` therefore takes F1 out
-   of `ROM_KEY` into `versionReq`, which `VersionKeys` checks first, and `HiscoreTableC64` clears it so an F1 from
-   another screen doesn't count. `ReadRomKey` reloads `ROM_KEY` before it returns: the game's key waits branch on its
-   flags.
-3. On a flip it inverts `zEnhanced`, sets `titleSteps` back to 1, so the 15-second attract timer starts again, and falls
-   into `DrawVersionLine`.
+2. Before `CheckMenuKeys`, `VersionKeys` looks for a flip: F1, or a new push of the joystick left or right
+   (edge-detected in `joyLR`). `ScanRomKey` reports F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like any other key,
+   so a held F1 flips once.
+3. On a flip, or when `versionReq` says F1 flipped it elsewhere, it sets `titleSteps` back to 1, so the 15-second
+   attract timer starts again, and falls into `DrawVersionLine`.
+
+F1 works on every screen before a game. `Present` checks `ROM_KEY` while the ROM interrupt is on (`zRomIrq`, every
+screen but play) and calls `TakeF1`, which takes the key out and runs `FlipVersion`: it inverts `zEnhanced`, changes
+the font (`SetFontC64`, V7: the screen is blanked for a couple of frames meanwhile) and sets `versionReq` for the home
+screen's line. So the menus, the credits and name entry flip in place, and the game's key waits never see F1.
+`ReadRomKey` makes the same check after its `Idle`, for an F1 that arrives just after the draw, and reloads `ROM_KEY`
+before it returns: the game's key waits branch on its flags. The start-up picture runs with interrupts masked and reads
+the keyboard itself: `ShowPicture` returns `PIC_F1` for F1, and `TitleTickC64` flips and goes to the home screen
+(`HiscoreScreen`, `$296B`); at power-up `Start` just clears `zEnhanced`.
 
 `DrawVersionLine` writes row 25 of the Oric screen (`SCREEN` + 1000) from `VersionText`: a cyan ink attribute and `[F1]
 VERSION`, then each version name after a blue ink attribute. For the chosen one it makes the attribute white and sets
@@ -75,7 +80,13 @@ back. The first line of a text row is a badline, so both stores land in the side
 turns grey, on PAL (63 cycles a line) and NTSC (65). Without the 25-cycle lead the first store landed mid-line and left
 an 8-pixel grey dash on the line above. About 100 cycles a frame.
 
-Still planned: per-row `$D016` fine scroll (V4, the F1 scroller).
+**Built (V4):** every row interrupt writes `$D016` from `rowCtl2` (multicolour and fine scroll), 4 cycles before the
+`$D021` store, in the right border of the row above's last line. Written after `$D018`, as the multicolour bit first
+was, it landed on the row's first line, a badline, too late: that line stayed unshifted. To load it ahead of the delay
+the paper now goes through a patched `lda #` (`@paper`), and `EV_DELAY_PAL` / `EV_DELAY_NTSC` drop from 3 to 1, so the
+other stores move by only 2 cycles. `SetRowMap` fills `rowCtl2` with `$08`, or `$18` in Enhanced play; `Present` sets
+the lane rows ([enhanced_graphics.md](enhanced_graphics.md#v4--smooth-scrolling-lanes)). Still planned: the F1
+scroller's fine scroll.
 
 ---
 
@@ -118,22 +129,24 @@ The VIC shows bank 2 (`$8000`–`$BFFF`) during play. In banks 0 and 2 the VIC s
 not RAM, so sprites and character sets must go below `$9000` or in `$B800`–`$B9FF`. Code and tables can go anywhere
 free.
 
-| Region          | Size    | VIC sees it | Use                                 |
-|:----------------|:--------|:------------|:------------------------------------|
-| `$76D9`–`$7C64` | 1,420 B | No          | Used: V0 and V1 code, tables, BSS   |
-| `$7C65`–`$7FFF` | 923 B   | No          | Free                                |
-| `$8400`–`$87FF` | 1,024 B | Yes         | 16 sprite blocks: frog              |
-| `$8800`–`$8FFF` | 2,048 B | Yes         | Used: multicolour play set (V1)     |
-| `$9000`–`$9FFF` | 4,096 B | No          | SID tables, title tune, disk code   |
-| `$B800`–`$B9FF` | 512 B   | Yes         | 8 sprite blocks: splat, splash, fly |
-| `$C800`–`$CFFF` | 2,048 B | Bank 3 only | Spare                               |
-| `$D000`–`$DFFF` | 4,096 B | No          | Spare (RAM under I/O)               |
-| `intro.rle`     | 6,739 B | No          | Spare after `UnpackPicture` has run |
+| Region          | Size    | VIC sees it | Use                                  |
+|:----------------|:--------|:------------|:-------------------------------------|
+| `$76D9`–`$7E3E` | 1,894 B | No          | Used: V0, V1, V4, V6, V7 code, BSS   |
+| `$7E3F`–`$7FFF` | 449 B   | No          | Free                                 |
+| `$8400`–`$87FF` | 1,024 B | Yes         | 16 sprite blocks: frog               |
+| `$8800`–`$8FFF` | 2,048 B | Yes         | Used: multicolour play set (V1)      |
+| `$9000`–`$9722` | 1,827 B | No          | Used: V4 tables; V7 fonts            |
+| `$9723`–`$9FFF` | 2,269 B | No          | SID tables, title tune, disk code    |
+| `$B800`–`$B9FF` | 512 B   | Yes         | 8 sprite blocks: splat, splash, fly  |
+| `$C800`–`$CFFF` | 2,048 B | Bank 3 only | Spare                                |
+| `$D000`–`$DFFF` | 4,096 B | No          | Spare (RAM under I/O)                |
+| `intro.rle`     | 6,739 B | No          | Spare after `UnpackPicture` has run  |
 
-With V1 the BSS ends at `$7C64` (`c64/build/hopper.map`), leaving under 1 KB below `$8000`. From V2 on, Enhanced code
-and tables go to `$9000`–`$9FFF`: the one-file `.prg` would then also cover `$8000`–`$8FFF`, which is harmless (the VIC
-screen and the multicolour set are written at run time), or `Start` moves them there as it moves the game. The full set
-of changes needs about 9.5 KB, so it still fits with the packed picture's space in reserve.
+The BSS now ends at `$7E3E` (`c64/build/hopper.map`), leaving 449 bytes below `$8000`: new tables go in `HIDATA`. Since V7, Enhanced data goes in
+the `HIGH` area at `$9000`–`$9FFF` (segment `HIDATA`, `c64/cfg/c64.cfg`). The one-file `.prg` therefore also covers
+`$8000`–`$8FFF` (the `GAP` area, zeros), which is harmless because the VIC screen and the multicolour set are written at
+run time. The `.prg` grew from 29 KB to 35 KB. The full set of changes needs about 9.5 KB, so it still fits with the
+packed picture's space in reserve.
 
 ---
 
@@ -159,7 +172,8 @@ from the same key script (`c64/src/autotest.s`):
 
 `tools/c64_screens.py` picks the program by the capture's name (`enh-*`). Classic captures are compared by eye with the
 previous build's: the few cycles Enhanced adds to shared paths can move a capture by a frame. Still to check by hand in
-VICE: real F1 and joystick presses, RESTORE, a full sheet in Enhanced, and NTSC.
+VICE: real F1 and joystick presses (F1 on the picture, which reads the keyboard itself, can't be scripted), RUN/STOP
+in a game, RESTORE, a full sheet in Enhanced, and NTSC.
 
 The key script leaves at least 25 frames between keys, and 80 between the sound menu and the controls menu: keys
 injected at fixed frames are lost if they arrive before the screen that wants them, and the old 15-frame gaps broke as

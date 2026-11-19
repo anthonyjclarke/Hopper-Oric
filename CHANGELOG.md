@@ -4,6 +4,24 @@
 
 ### Added
 
+- C64 Enhanced smooth-scrolling lanes (V4): between the game's one-character steps each lane row is shifted 0–7 pixels
+  with the `$D016` fine scroll, round(`lane_timer` × 8 / `lane_speeds`), so logs, turtles and traffic glide
+  (`FineRow`, `FineTab`; `Present` takes each row's value with its copy, `rowCtl2`). The road lane the frog stands in
+  stays in whole steps. Every row interrupt now writes `$D016` 4 cycles before `$D021`, in the border (the paper through
+  a patched `lda #`, `EV_DELAY` 3 → 1). The tables are in `HIDATA` (main memory has 449 bytes left).
+  `docs/tools/capture_screens.py` records `enh-smooth.gif` from VICE in place of the mock-up, and the `enh-play`
+  capture moves to frame 3030.
+- C64 RUN/STOP ends a game (C64 Remix, `docs/remix.md` item 10): GAME OVER, the hi-score check, then the hi-score
+  table. `ReadKeysC64` checks it in play and pause and jumps to `QuitGameC64`.
+- C64 F1 flips Classic / Enhanced on every screen before a game, not only the home screen: the menus, the credits and
+  name entry flip in place (`Present` calls `TakeF1` while the ROM interrupt is on), and F1 on the start-up picture
+  flips and goes to the home screen (`ShowPicture` returns `PIC_F1`; the label `HiscoreScreen` at `$296B`).
+- C64 Enhanced Oric-style font (V7): a newly drawn 5 x 7 font with single-pixel strokes, as text art in
+  `tools/oric_style_font.py` (`make c64-font` writes `c64/src/oricfont.inc`, `W6` layout). In Enhanced it replaces the
+  C64 font on every screen (`KeepC64Font`, `SetFont`); F1 on the home screen swaps the font with the screen blanked
+  for a couple of frames, and updates the game's copy at `$3100` (`SetFontC64`). The font and a RAM copy of the C64 font
+  are at `$9000`-`$95FF`: `c64/cfg/c64.cfg` gains the `HIGH` area (segment `HIDATA`) and a filled `GAP`, so the `.prg`
+  now covers `$0801`-`$95FF`. `render_enhanced.py` draws `font-sheet.png`, `font-screens.png` and `font-credits.png`.
 - C64 Enhanced road markings (V6): in an Enhanced game the row interrupts for Oric rows 20 and 23 turn `$D021` grey for
   one raster line, where the port hides the Oric's dashed lines (rows 19 and 22). Only while those rows show lanes, so
   the sheet-start signs are untouched.
@@ -83,6 +101,20 @@
 
 ### Fixed
 
+- C64 keys stopped working, and the screen lost its colours and double height, after some F1 presses: `SetFontC64`
+  wrote `$D011` back with bit 7 as it read it, the raster's bit 8, which sets the raster interrupt's line. A flip while
+  the beam was below line 255 moved the interrupt to line 256 + n, which a frame never reaches, so the key scan and the
+  row splits stopped. It now clears bit 7. (Found from a VICE snapshot: interrupt line 314.)
+- C64 Enhanced drew the road markings, and set multicolour, on the blank rows of the READY / SHEET NO signs, which sit
+  where the road lanes are. `McSimple` now leaves a row hires when it starts with a character, as the signs' rows do;
+  lane rows start with their colour attributes.
+- C64 hi-score screen after a game whose score didn't make the table: `ShowHiScores` drew the table without the port's
+  hook, so the screen kept the game's row map and double-height set (the title's stars showed as hedge), and had no
+  version line. `$1BD2` now calls `HiscoreTableC64`, like `$1B51` and `$2971`.
+- C64 picture lopsided: Oric column 0 showed black and column 1 the row's paper on the left, while the playfield ran to
+  the border on the right. The picture now sits one column left (Oric column *c* is VIC column *c*–1, `rowDst`,
+  `rowCol` and `CopyRows`), so the playfield has one column of the row's paper on each side and Oric column 0 is not
+  shown. Both versions; the screenshots and Enhanced mock-ups are redrawn to match.
 - F1 on the hi-score screen was sometimes lost: `CheckMenuKeys` draws a frame before reading the key and dropped an F1
   that arrived meanwhile. `ReadRomKey` now holds F1 back in `versionReq` for `VersionKeys`.
 - The scripted test's keys were too close together (15 frames between redefine prompts, 50 between the menus): a few

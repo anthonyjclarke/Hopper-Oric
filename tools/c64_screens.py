@@ -33,7 +33,7 @@ CAPTURES = {
     'play': (2995, 'Playing: lanes moving'),
     'hops': (3210, 'Hopping up the road: the frog is hit, the death flash'),
     'later': (3630, 'A little later'),
-    'enh-play': (2995, 'Enhanced: playing, multicolour lanes'),
+    'enh-play': (3030, 'Enhanced: playing, multicolour lanes, smooth scrolling'),
     'enh-hops': (3210, 'Enhanced: the death flash'),
     'enh-later': (3630, 'Enhanced: a little later'),
 }

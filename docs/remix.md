@@ -13,17 +13,18 @@ changed: `make verify` keeps it byte-identical to the tape.
 
 ## Summary
 
-| # | Change                                           | Kind           | Where                         |
-|:--|:-------------------------------------------------|:---------------|:------------------------------|
-| 1 | The frog can hop to the outermost columns        | Gameplay       | `StepFrogC64`, `CarryFrogC64` |
-| 2 | Controls choice 2 is **Redefine keys**           | Controls       | `RedefineKeys` (`input.s`)    |
-| 3 | Controls choice 1 is Z, X, K, M                  | Controls       | `keys_set1` data              |
-| 4 | Joystick in port 2, with either key choice       | Controls       | `ReadKeysC64`, `JoyToKeys`    |
-| 5 | Start-up picture from the PSS cassette cover     | Presentation   | `intro.s`, `make_intro.py`    |
-| 6 | Attract loop: hi-scores, picture, credits        | Presentation   | `TitleTickC64`                |
-| 7 | No hang when the frog reaches a home with no fly | Fix (hardware) | `EraseFlyC64`                 |
-| 8 | Hardware stand-ins: screen, sound, keys, RESET   | Port           | [porting.md](porting.md)      |
-| 9 | Version line on the hi-score screen (F1)         | Presentation   | `VersionKeys`                 |
+| #  | Change                                           | Kind           | Where                         |
+|:---|:-------------------------------------------------|:---------------|:------------------------------|
+| 1  | The frog can hop to the outermost columns        | Gameplay       | `StepFrogC64`, `CarryFrogC64` |
+| 2  | Controls choice 2 is **Redefine keys**           | Controls       | `RedefineKeys` (`input.s`)    |
+| 3  | Controls choice 1 is Z, X, K, M                  | Controls       | `keys_set1` data              |
+| 4  | Joystick in port 2, with either key choice       | Controls       | `ReadKeysC64`, `JoyToKeys`    |
+| 5  | Start-up picture from the PSS cassette cover     | Presentation   | `intro.s`, `make_intro.py`    |
+| 6  | Attract loop: hi-scores, picture, credits        | Presentation   | `TitleTickC64`                |
+| 7  | No hang when the frog reaches a home with no fly | Fix (hardware) | `EraseFlyC64`                 |
+| 8  | Hardware stand-ins: screen, sound, keys, RESET   | Port           | [porting.md](porting.md)      |
+| 9  | Version switch (F1), shown on the hi-scores      | Presentation   | `VersionKeys`, `TakeF1`       |
+| 10 | RUN/STOP ends a game                             | Controls       | `QuitGameC64`                 |
 
 ---
 
@@ -131,8 +132,22 @@ fast). Its **Known Differences** table lists what shows.
 **Original.** Row 25 of the hi-score screen is blank.
 
 **C64.** It shows `[F1] VERSION  CLASSIC  ENHANCED`, and F1 or the joystick left or right picks Classic (the port as
-this chapter describes it) or the C64 Enhanced look (`VersionKeys` and `DrawVersionLine`, from `TitleTickC64`). Play is
-the same in both. Everything about the Enhanced version is in [enhanced.md](enhanced.md).
+this chapter describes it) or the C64 Enhanced look (`VersionKeys` and `DrawVersionLine`, from `TitleTickC64`). F1 also
+flips on every other screen before a game (`TakeF1`, from `Present`). Play is the same in both. Everything about the
+Enhanced version is in [enhanced.md](enhanced.md).
+
+---
+
+## 10. RUN/STOP Ends a Game
+
+**Original.** A game ends only when the last life is lost. The RESET button stops it, but goes back to the sound menu.
+
+**C64.** RUN/STOP in a game, or while it is paused, ends it at once: GAME OVER, the hi-score check (the score so far
+counts), then the hi-score table. `ReadKeysC64` checks the key on every key read in a game and jumps to
+`QuitGameC64`, which resets the stack, silences the sound and enters the game's own `GameOver`. RESTORE still works as
+the RESET button.
+
+**Why.** A player who wants another go, or the other version, had to play to the end or go back through both menus.
 
 ---
 

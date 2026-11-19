@@ -48,6 +48,7 @@
 | `make c64-diff`  | Every byte of the C64 game image that differs from the Oric program                     |
 | `make c64-smoke` | Build the scripted test `.prg` and take VICE captures into `c64/build/`                 |
 | `make c64-intro` | Redraw the C64 start-up picture (`c64/src/intro.rle`)                                   |
+| `make c64-font`  | The Enhanced Oric-style font (`c64/src/oricfont.inc`)                                   |
 
 ---
 
