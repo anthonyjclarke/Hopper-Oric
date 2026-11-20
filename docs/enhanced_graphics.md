@@ -87,38 +87,48 @@ paper.
 
 ## V2 – Sprite Frog with Hop Arc
 
-**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
+**Built** (`c64/src/sprites.s`), checked in VICE. The frog is a sprite: a multicolour body (green, light green, a yellow
+top edge) with a hires black outline sprite round it, so it stands out on the green verge and the yellow median. A hop
+glides to its new place over a few frames on a low arc instead of jumping two columns at once. On the river the frog
+rides its log or turtle with the lane's fine scroll (V4). Death shows the original splat as a sprite.
 
-**What changes.** The frog becomes a sprite: a multicolour body (green, light green, yellow) with a hires black outline
-sprite laid over it, so it stands out on the green verge and the yellow median. A hop is no longer an instant two-column
-jump. Over about 140 ms the frog glides to its new place on a low arc, stretched by a row in mid-air. Death shows the
-original splat as a sprite.
+![VICE: Enhanced play, the sprite frog on the start verge](images/screens/enh-play.png)
 
-![The frog sprites made from frog_gfx, the hop frame, the splat and the fly](images/enhanced/sprites.png)
+![The sprite images, made from frog_gfx and splat_gfx, and the fly](images/enhanced/sprites.png)
 
-![Two hops: the port's character frog (top) and the sprite frog (bottom)](images/enhanced/hop.gif)
+![Mock-up of two hops: the port's character frog (top) and the sprite frog (bottom)](images/enhanced/hop.gif)
 
-**How it is made.** The four directions come from `frog_gfx`, converted to multicolour as in V1. The outline is drawn
-around them by the tool. The splat comes from `splat_gfx`. Each direction needs a body and an outline block for the
-resting frame and the hop frame, so 16 sprite blocks.
+![VICE: the sprite frog riding the turtles](images/screens/enh-later.png)
+
+**How it is made.** `tools/frog_sprites.py` (`make c64-sprites`) reads the four directions from `frog_gfx` and the
+splat from `splat_gfx` on the tape, widens them to 8 pixels a character as the port shows them, converts them to
+multicolour as in V1 and draws the outline round them, writing `c64/src/sprites.inc`. Five frames of two sprites, ten
+blocks from `$8400`. The mock-up's stretched hop frame is left out: the arc alone reads well at this size.
 
 **How it is shown.** The game still writes the frog's characters (`$3A`–`$3D`) into the screen and reads the cells under
-them (`under_frog`), so collision is untouched. In the multicolour character set those four characters are blank. Each
-frame, `UpdateSprites` places the sprite from `frog_row` and `frog_col`. When either changes, it tweens from the old
-position to the new one over a few frames. On a log or turtle the frog moves with the lane in whole-character steps, as
-the game moves it. With V4 it also takes the lane's fine scroll.
+them (`under_frog`), so collision is untouched. Only their glyphs are blank: `SetFrogGfx` (patched at its start,
+`SetFrogGfxC64`) records the direction as the sprite's frame instead of drawing it, and `SetSplatGfx`'s `jsr DrawFrog`
+(`SplatDrawC64`) does the same for the splat. At the end of each `Present`, `SprTarget` turns `frog_pos` into a sprite
+position through the play row map, the same moment the lanes' characters and fine scroll are copied, and adds the
+lane's fine scroll on the river. The frame interrupt's `SprTick` moves the sprite there: a move of 3 pixels or less
+(riding) is taken at once, a hop halves the distance each frame under a 6-frame arc (`HopLift`), and a move of more than
+4 characters (a new frog after a death or a home) is taken at once. The sprites hide on the sheet-start signs, whose
+rows start with a character.
 
-The frog never shares a row with more than one other sprite (the fly is in the home row), so no multiplexing is needed.
+With the frog a sprite, V4 no longer holds back the road lane the frog stands in: the hidden character frog doesn't
+show, so the traffic glides past the frog. The frog never shares a row with more than one other sprite (the fly is in
+the home row), so no multiplexing is needed.
 
 ---
 
 ## V3 – Fly Sprite
 
-**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
-
-**What changes.** The fly in a home flaps its wings (two frames) and bobs by a pixel. It appears where the game draws
-its fly character, from `fly_ptr`, and goes when `fly_on` clears. The fly character stays on the screen for the game to
-read.
+**Built** (`c64/src/sprites.s`), checked in VICE on sheet 3. The fly in a home flaps its wings (two frames, every 4
+frames) and bobs by a pixel (every 8). It is two hires sprites, a black body and light grey wings, from the mock-up's
+drawing; the mock-up's red eyes are left out, since each hires sprite has one colour. `SprTarget` shows it where the
+game has drawn its first character (`$7C`) at `fly_ptr`; the game's `fly_on` doubles as a copy pointer elsewhere, so the
+screen cell is the test. The fly's characters stay on the screen for the game to read, with their glyphs blank
+(`McBuild` clears them).
 
 ---
 
@@ -145,10 +155,11 @@ translation costs about 4,000 cycles a frame, inside the time the Oric spent wai
 rows to fit 28 rows on 25, so the three car lanes sit together. Enhanced draws a one-pixel grey line at each boundary
 instead, without spending a row. It is solid, not dashed: a raster colour change covers the whole line.
 
-**How it is shown.** The row interrupts for Oric rows 20 and 23 turn `$D021` grey for one raster line and back
-([enhanced_platform.md](enhanced_platform.md#raster-interrupt)). Only the background takes the colour, so a car passing
-over the line hides it, as a car would. The lines are drawn only while those rows show lanes, so the sheet-start signs,
-which use the same rows, are left alone. The `enh-play` capture under V1 shows them.
+**How it is shown.** The row interrupts for Oric rows 20 and 23 start the row with `$D021` grey and turn it back after
+its first raster line, the lane boundary ([enhanced_platform.md](enhanced_platform.md#raster-interrupt)). Only the
+background takes the colour, so a car passing over the line hides it, as a car would. The lines are drawn only while
+those rows show lanes, so the sheet-start signs, which use the same rows, are left alone. The `enh-play` capture under
+V1 shows them.
 
 ---
 
@@ -162,7 +173,7 @@ prompts, the credits, the hi-score table and title, the signs and the status lin
 
 ![VICE: the controls menu and redefine prompts in Enhanced](images/screens/redefine.png)
 
-![VICE: the hi-score screen in Enhanced](images/screens/hiscores.png)
+![VICE: the hi-score screen in Enhanced](images/screens/enh-hiscores.png)
 
 The glyphs are text art in `tools/oric_style_font.py` (`#` set, `.` clear), one block per ASCII code `$20`–`$7F`, so
 they can be edited in any editor. `make c64-font` writes `c64/src/oricfont.inc` from it.
@@ -185,26 +196,63 @@ keep the C64 font for blue and red text.
 
 **How it is shown.** `BuildFont` builds the C64 font at start-up as before, then `KeepC64Font` copies it to
 `C64FontCopy` and `SetFont` puts the font of the chosen version into `CHARSET` codes `$20`–`$7F`. `ColdStart` then saves
-that to `$3100` as usual, and `RestoreCharset` brings it back for every menu. A flip on the home screen calls
+that to `$3100` as usual, and `RestoreCharset` brings it back for every menu. A flip on the instructions page calls
 `SetFontC64`: the screen is blanked, `SetFont` copies the other font in (from RAM, so the character ROM needn't be
 banked in and interrupts stay on), the copy at `$3100` is updated, `RefreshCharsets` rebuilds the inverse and
-double-height sets, and the screen comes back, a couple of frames later. The font data (768 bytes) and the C64 copy (768
-bytes) are at `$9000`–`$95FF` ([enhanced_platform.md](enhanced_platform.md#memory)).
+double-height sets, and the screen comes back, a couple of frames later. The font data (768 bytes) is in `HIDATA`, and the C64
+copy (768 bytes) at `$C800`–`$CAFF` in bank 3 RAM ([enhanced_platform.md](enhanced_platform.md#memory)).
+
+---
+
+## F3 – Enhanced Instructions Page
+
+**Built** (`EnhancedPage` in `c64/src/platform.s`, the page from `tools/instructions_page.py`), checked in VICE.
+
+**What changes.** In Enhanced the credits and instructions are one page, drawn at once instead of laid down by the
+hopping frog: the title framed with the PSS line and the author, a CONTROLS panel with the four chosen keys as keycaps,
+P, RUN/STOP and the joystick, a HOW TO PLAY panel with the aim and the points, and below them the 1 (start), 3 (new
+keys) and F1 (Classic) buttons and the PSS address on one line. The title frog and the jingle are the original's
+(`CreditsEnd`). Of three mock-ups (one column, a key cross, panels) layout C was chosen.
+
+![VICE: the Enhanced instructions page](images/screens/instructions.png)
+
+![The three mock-ups; C was built](images/enhanced/mockups/instr-options.png)
+
+**How it is shown.** The page is an ordinary Oric screen, so the port draws it as it draws the original: ink attributes
+for the colours, inverse characters for the keycaps and buttons, the double-height attribute for the title (a row is
+double height as a whole, so the title rows hold only the title and the box sides). The tool packs the 28 rows with the
+picture's RLE (635 bytes, `instrpage.inc`); `EnhancedPage` unpacks it into `SCREEN` with `Unpack`, puts the four key
+names (from the credits text, where `ControlsMenu` keeps them) into the keycaps, and sets `versionShown` so F1 works.
+The frames are drawn in six characters no page text or key name uses (`{` `}` `` ` `` `#` `~` `|`):
+`LendPageGlyphs` puts line pieces in those codes while the page is up, and `SetRowMap` puts the font's glyphs back on
+the next screen (`ReturnPageGlyphs`). The game reinstalls its own graphics in those codes when a game starts.
+`InitGameC64` clears the screen first, so the page never shows with the codes handed back.
 
 ---
 
 ## F1 – Enhanced Attract Screen
 
-**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
+**Built** (`AttractStart`, `AttractPresent` in `c64/src/sprites.s`), checked in VICE.
 
-**What changes.** On the home screen ([enhanced.md](enhanced.md#the-version-switch)) the double-height title takes a
-colour cycle, one colour per raster line pair, with thin raster bars above and below it. A sprite frog hops along the
-empty rows 19 and 22. A smooth scroller runs on row 23. The hi-score table, the version line and the prompts stay where
-they are printed.
+**What changes.** In Enhanced the hi-score screen of the attract loop comes alive: the title's letters roll through a
+colour cycle, thin lines run under the title and round a scroller (`HOPPER - BY A.J.CLARKE - P.S.S. 1983 - NOW ON THE
+COMMODORE 64 - PRESS 1 TO PLAY...`), and the sprite frog hops along the empty row under the table. The table and the
+prompts stay where the game prints them; Classic and the name-entry table are unchanged.
 
-**How it is shown.** The colour cycle and bars are raster interrupt changes on the title rows only. The scroller uses
-the hidden-row trick in reverse: row 23 is blank in the game, so the platform owns it, and per-row `$D016` scrolls it.
-The frog reuses the V2 sprites.
+![VICE: the attract screen in Enhanced](images/screens/enh-hiscores.png)
+
+**How it is shown.** No raster changes: the row interrupt has no cycles to spare, so the mock-up's colour per raster
+line became a colour per letter. `TitleTickC64` calls `AttractStart` on the screen's first tick: it draws the lines in
+the page's borrowed `~` glyph (rows 2, 23 and 25; `LendPageGlyphs`), sets up the V2 frog sprites and sets `attractOn`.
+`Present` parses the title rows first; right after row 1 (`ParseRowAtt`) `AttractTitle` writes the cycle into their
+colour RAM, (`zTick` / 2) mod 12 rolling along, and the round-robin parse skips them while `attractOn` is set. At the
+end of `Present`, `AttractPresent` runs the frames since its last call: the scroller, one pixel a frame through row
+24's `$D016` (its `rowCtl2`, in 38 columns so the jumps at the edges are hidden), shifting the Oric and VIC rows
+together each eighth pixel; and every 25 frames the frog's next hop, two columns along row 19, which the frame
+interrupt (`SprTick`, run while `attractOn` too) eases in with its arc. The scroller is on row 24, not the mock-up's
+23, so the frog's sprite DMA is over before the scroller row's interrupt. `SetRowMap` clears `attractOn`, and
+`SprSetup` and `ReturnPageGlyphs` take the sprites and the `~` away. About 450 bytes in `HIDATA`, made room for by
+moving `C64FontCopy` to `$C800` (bank 3 RAM, filled at start-up, not in the `.prg`).
 
 ---
 
@@ -225,9 +273,8 @@ stores it in `rowCtl2` just after, so the characters and the offset change toget
 `rowCtl2` for every row.
 
 **The frog.** On the river the frog is carried by its log or turtle, so it glides with it. On the road the frog is
-drawn in the lane's own characters but doesn't move with the traffic, so the road lane the frog is in isn't shifted
-(`frog_row`): it steps by whole characters while the frog is there, and its traffic jumps by up to 7 pixels as the frog
-hops in or out. A sprite frog (V2) would remove that.
+drawn in the lane's own characters but doesn't move with the traffic. Before V2 the road lane the frog stood in stepped
+by whole characters for that reason; with the sprite frog the characters are blank, so every lane glides.
 
 **The edges.** The shifted rows push up to 7 pixels into the margin on the right and leave the row's paper on the left.
 The margins are the row's paper anyway ([porting.md](porting.md#decisions)), so nothing ragged shows.

@@ -1,188 +1,118 @@
-# HOPPER – Oric-1 reconstruction
+# HOPPER
 
-HOPPER is a Frogger-style game for the Oric-1, published by Personal Software
-Services (P.S.S.), Coventry. The in-game credits name the author as A.J. Clarke.
-The game's entry on oric.org: [Hopper](https://www.oric.org/software/hopper-1427.html).
+*Hopper* is a *Frogger*-style arcade game for the Oric-1, written by A.J. Clarke and published on cassette in 1983 by
+Personal Software Services (PSS) of Coventry. This repository brings it back: a commented source that rebuilds the
+original tape byte for byte, and a Commodore 64 version with two looks, **Classic** and **Enhanced**.
 
-This repository rebuilds the game from assembly source. `make verify` assembles
-`src/hopper.s` and checks that the result is **byte-identical** to the original
-tape image in `original/HOPPER.TAP`.
+![The PSS cassette inlay](docs/images/original/inlay.png)
 
 ---
 
-## Layout
+## The Game
 
-| Path                    | What it is                                    |
-|:------------------------|:----------------------------------------------|
-| `original/HOPPER.TAP`   | The original tape image (reference)           |
-| `src/hopper.s`          | Full game source (ca65)                       |
-| `src/oric.inc`          | Oric hardware: VIA, screen, character sets    |
-| `src/vars.inc`          | Game variables: zero page and page 4          |
-| `hopper.cfg`            | ld65 config: writes TAP header + program      |
-| `Makefile`              | `make`, `make verify`, `make run`, `make debug` |
-| `tools/gen_source.py`   | Disassembler that generated `src/hopper.s`    |
-| `tools/annotations.py`  | Names, comments and data layout it uses       |
-| `tools/dis_range.py`    | Quick linear disassembly of an address range  |
-| `.vscode/`              | Build/verify/run tasks and ca65 highlighting  |
-| `c64/`                  | The Commodore 64 port                         |
-| `docs/`                 | Documentation and the `HOPPER.html` handbook  |
-| `justfile`              | Documentation recipes (`just docs`)           |
+Guide five frogs, one at a time, from the bank at the bottom of the screen into the five homes in the hedge at the top.
+First comes a three-lane road of cars and trucks, then a middle bank with a snake on it, then a river: hop onto the
+logs and the turtles (which dive now and then) and ride them across, without falling in or being carried off the edge
+of the screen. One TIME counter covers the whole sheet, and every hop, frog home and fly eaten scores. Five frogs home
+clears the sheet, and the next one is faster; from sheet 3 a fly sits in an empty home for a bonus. You have five
+lives, and the best eight scores go on the hi-score table.
+
+| Keys (C64)      | Does                                                         |
+|:----------------|:-------------------------------------------------------------|
+| Z X K M         | Left, right, up, down; or your own keys; or joystick port 2  |
+| P               | Pause                                                        |
+| RUN/STOP        | End the game                                                 |
+| 1               | Start a game                                                 |
+| 3               | Redefine the keys (on the instructions or hi-score screen)   |
+| F1              | Classic or Enhanced (on the instructions page)               |
+| RESTORE         | The Oric's RESET: back to the sound menu                     |
+
+The full rules, lanes, scoring and sheets are in the [player's guide](docs/player_guide.md).
 
 ---
 
-## Commodore 64 version
+## Screenshots
 
-`c64/` holds a C64 port: the Oric code itself, with only the hardware replaced (the screen, sound chip, keyboard and
-timers), running on a small platform layer. See [docs/porting.md](docs/porting.md), and
-[docs/HOPPER.html](docs/HOPPER.html), the full documentation in one offline page ([docs/README.md](docs/README.md)
-lists the chapters).
+The Oric original, drawn by the game's own code:
+
+| Play                                                 | Hi-scores                                                    |
+|:-----------------------------------------------------|:-------------------------------------------------------------|
+| ![Oric-1: play](docs/images/graphics/oric-game.png) | ![Oric-1: the hi-score table](docs/images/graphics/oric-hiscores.png) |
+
+The C64 version, in its two looks:
+
+| C64 Classic                                                   | C64 Enhanced                                                       |
+|:--------------------------------------------------------------|:-------------------------------------------------------------------|
+| ![Classic: play](docs/images/screens/play.png)                | ![Enhanced: play](docs/images/screens/enh-play.png)                |
+| ![Classic: the instructions](docs/images/screens/credits-done.png) | ![Enhanced: the instructions page](docs/images/screens/instructions.png) |
+| ![Classic: the death flash](docs/images/screens/hops.png)     | ![Enhanced: riding the top log](docs/images/screens/enh-ride.png)   |
+| ![Classic: the hi-scores](docs/images/screens/hiscores.png)   | ![Enhanced: the attract screen](docs/images/screens/enh-hiscores.png) |
+
+| The C64 start-up picture                                   | Enhanced: smooth-scrolling lanes                         |
+|:-----------------------------------------------------------|:---------------------------------------------------------|
+| ![The C64 start-up picture](docs/images/screens/intro.png) | ![Enhanced: the lanes glide](docs/images/screens/enh-smooth.gif) |
+
+---
+
+## The Versions
+
+| Version             | Machine | What it is                                                         |
+|:--------------------|:--------|:-------------------------------------------------------------------|
+| Oric original (1.0) | Oric-1  | The 1983 tape, rebuilt byte for byte; never changed               |
+| C64 Classic         | C64     | The Oric game and look, with a short list of C64 Remix changes    |
+| C64 Enhanced        | C64     | The same game with a C64 look: multicolour, sprites, smooth lanes |
+
+**Classic** draws the game as the Oric does, in the C64 font, with the AY's tunes on the SID. The **C64 Remix** adds a
+few deliberate changes: your own keys, the Z X K M key set, the joystick, a start-up picture made from the cassette
+cover, the frog reaching the outermost columns, RUN/STOP to end a game and a fix for a hang the Oric code causes on a
+C64 ([remix.md](docs/remix.md) lists each one). **Enhanced** plays exactly like Classic, same code, timings and
+collisions, but uses the C64 hardware Classic leaves idle: multicolour lanes and road markings, a sprite frog and fly
+with gliding hops, smooth-scrolling lanes, an Oric-style font, its own instructions page and a livelier hi-score screen
+([enhanced.md](docs/enhanced.md)).
+
+---
+
+## History
+
+A.J. Clarke wrote *Hopper* for the Oric-1, and PSS (452 Stoney Stanton Road, Coventry) sold it on cassette in 1983 at
+£6.95, catalogue number 010, alongside his *Light Cycle*. The PSS advert called it an all machine code version of
+*Frogger*, with variable-speed traffic, snakes, diving turtles, fleas, logs, a decreasing time limit, ever-increasing
+speed, a hi-score table, full colour and sound ([original_release.md](docs/original_release.md)).
+
+The Oric-1 came from Oric Products International, set up by Tangerine Computer Systems of Cambridgeshire: a 1 MHz 6502,
+a 6522 VIA, an AY-3-8912 sound chip and a 40×28 text screen whose colours are set by attribute bytes in the text
+itself. It sold well in the UK and especially in France ([oric_history.md](docs/oric_history.md)).
+
+---
+
+## Behind the Scenes
+
+This project starts from the tape image (`original/HOPPER.TAP`): it disassembled it, named and commented every
+routine, and rebuilt it with cc65 until `make verify` reproduced the tape byte for byte. The C64 version runs that same
+Oric code, every byte at its Oric address, on a small platform layer that stands in for the Oric's screen, sound chip,
+keyboard and timers.
+
+You need cc65 (`brew install cc65`) and Python 3; VICE runs the C64 version and Auric the Oric one.
 
 ```bash
-make c64
+make verify
 ```
 
 ```bash
 make c64-run
 ```
 
-The output is `c64/build/hopper.prg` (`make c64-d64` for a disk image). It opens on a picture made from the PSS
-cassette inlay (any key or fire skips it), which comes back in the attract loop: picture, credits and instructions,
-hi-scores (1 or fire on the picture starts a game). Keys: choice 1 is Z, X, K, M (left, right, up, down); choice 2 asks for
-your own four keys; P pauses; joystick port 2 works with either. RESTORE is the Oric's RESET button.
+`make verify` builds `build/HOPPER.TAP` and checks it against the original; `make c64-run` builds
+`c64/build/hopper.prg` and starts it in VICE (`make c64-d64` for a disk image, `make run` for the Oric build in Auric).
 
-This is the **C64 Remix**: it plays as the Oric original except for a short list of deliberate changes (Redefine keys,
-the Z X K M key set, the joystick, the start-up picture and attract loop, the frog reaching the outermost columns, and
-a fix for a hang the Oric code causes on a C64). [docs/remix.md](docs/remix.md) documents each one.
+| Read                                        | For                                                        |
+|:--------------------------------------------|:-----------------------------------------------------------|
+| [docs/HOPPER.html](docs/HOPPER.html)        | Every chapter in one offline page, images and audio inside |
+| [docs/README.md](docs/README.md)            | The list of chapters                                       |
+| [source_guide.md](docs/source_guide.md)     | Repository layout, toolchain, build targets, conventions   |
+| [architecture.md](docs/architecture.md)     | Boot, memory map, the main loop, timing                    |
+| [quirks.md](docs/quirks.md)                 | Bugs and oddities found in the original                    |
+| [porting.md](docs/porting.md)               | How the C64 version was made                               |
+| [CHANGELOG.md](CHANGELOG.md)                | Release history                                            |
 
----
-
-## Building
-
-You need the cc65 toolchain (`ca65`, `ld65`) and Python 3.
-
-```bash
-brew install cc65
-```
-
-```bash
-make verify
-```
-
-The output is `build/HOPPER.TAP`, plus `build/hopper.lst` (listing),
-`build/hopper.map` and `build/hopper.lbl` (labels, handy in a debugger).
-
-In VS Code, **Terminal → Run Build Task** (⇧⌘B) builds. The other tasks
-(*Verify against original*, *Run in Auric (Oric-1)*, *Run in Auric with
-debugger*) are under **Terminal → Run Task**. Install the recommended
-*ca65* extension for syntax highlighting.
-
----
-
-## Running in Auric
-
-[Auric](https://github.com/pugo/Auric) is built from source in
-`~/PlatformIO/Projects/Auric` (`build/src/auric`). It needs the Oric ROM images,
-which are not distributed with it. Put them in `~/PlatformIO/Projects/Auric/ROMS/`:
-
-| File           | Needed for                  |
-|:---------------|:----------------------------|
-| `basic10.rom`  | Oric-1 mode – HOPPER        |
-| `basic11b.rom` | Atmos mode (the default)    |
-| `microdis.rom` | Microdisc drive (optional)  |
-
-`ROMS/README_ROMS.md` in the Auric folder lists the expected SHA1 of each.
-
-```bash
-make run
-```
-
-`make run` starts Auric in **Oric-1 mode** with the tape autoloading. `make
-debug` does the same with Auric's debugger open; the addresses in the comment
-column of `src/hopper.s` and `build/hopper.lbl` match what it shows. If Auric
-lives elsewhere: `make run AURIC_DIR=/path/to/Auric`.
-
-Use Oric-1 mode. The game relies on Oric-1 ROM locations (the RESET vector at
-`$022B`, the key buffer at `$02DF`, the cursor pointer at `$12`). The Atmos ROM
-keeps these elsewhere, so the menus may not respond there.
-
-### Playing
-
-At the sound menu press 1, 2 or 3, then pick a key set:
-
-| Set | Left | Right | Up  | Down |
-|:----|:-----|:------|:----|:-----|
-| 1   | Z    | X     | '   | /    |
-| 2   | ,    | .     | A   | Z    |
-
-P pauses. In attract mode, 1 starts a game and 2 shows the instructions.
-
----
-
-## How the source was reconstructed
-
-The TAP file holds one machine-code block, `$0500`–`$30D4`, set to autorun.
-`tools/gen_source.py` traces the code by recursive descent from the entry
-points: the tape entry `$0500` and the RESET handler `$0560`, which the game
-installs itself. It also starts from five routines nothing calls. Whatever
-isn't reached as code is data. `tools/annotations.py` provides the names,
-comments and data formats. Character graphics are printed as pixel art in the
-comments.
-
-Every instruction keeps its original address in the comment column. Two
-original quirks needed special handling to stay byte-identical (see below).
-Instructions that used absolute addressing on a zero-page address are written
-with `a:` so ca65 doesn't shorten them.
-
-### Editing workflow
-
-* **Now:** `src/hopper.s` is the master. Edit it directly and run `make
-  verify` to check whether you have changed the output.
-* `make regen` rewrites `src/hopper.s` from the original TAP and
-  `tools/annotations.py`. This is useful while names and comments are still
-  being improved, but it **discards hand edits** to `hopper.s`.
-* The source is not relocatable yet. Some pointers are built from immediate
-  bytes (`lda #$B5` …), so moving code changes behaviour. Keep addresses fixed
-  for a faithful build.
-
----
-
-## Things found in the original
-
-* **Branch into an instruction (`$0FEE`).** `CheckFrogBounds` branches to
-  `$0FD6`, one byte into an `inc` instruction. The byte there, `$12`, is an
-  illegal opcode that locks up an NMOS 6502. It only runs if the frog row
-  reaches 10, which the game should never allow.
-* **Jump into an instruction (`$1BE6`).** After the hi-score table, the code
-  jumps to `$296D`, one byte into `jsr ClearScreen`. It runs `ORA #$20 / LDY
-  #$1A` instead, which is harmless, and skips the screen clear.
-* **Hidden exit at `$A800`.** If a certain key combination is held while RESET
-  is pressed, the RESET handler jumps to `$A800`. Nothing is there on a normal
-  machine. It was probably the author's development monitor.
-* **Hi-scores live in character-set RAM.** The table is kept at `$BA00`, in the
-  alternate character set, which this game doesn't use. A RESET restarts the
-  game at `WarmStart` without reloading it, so hi-scores survive.
-* **Leftovers.** There are five routines nothing calls, NOP padding where code
-  was removed, and memory fill patterns (`$FF`, `$55`, `$EA`) between routines.
-  Most routines start on round addresses, which suggests the game was
-  hand-assembled with a monitor.
-* **Typo:** the attract screen says "INSTRUCTONS".
-
----
-
-## Memory map
-
-| Address         | Contents                                      |
-|:----------------|:----------------------------------------------|
-| `$0400`–`$0462` | Game variables (`vars.inc`)                   |
-| `$0500`–`$05CB` | Start-up, RESET handler, pause                |
-| `$0600`–`$0947` | Character graphics, colours, lane data, sound |
-| `$0948`–`$2206` | Game code with small tables between routines  |
-| `$22FF`–`$23FE` | Default hi-score table                        |
-| `$2400`–`$2771` | Credits/instructions text and hop path        |
-| `$2778`–`$2BF9` | Attract mode, fly, music player               |
-| `$2C00`–`$2F29` | In-game tunes and the sound menu text         |
-| `$2F30`–`$30AB` | Controls menu, sheet tune                     |
-| `$3100`–`$33FF` | Saved ROM font (written at run time)          |
-| `$B400`–`$B7FF` | Character set (partly redefined)              |
-| `$BA00`–`$BAFF` | Hi-score table (in alternate-charset RAM)     |
-| `$BB80`–`$BFDF` | Text screen; row 27 is the status line        |
+The C64 start-up picture is `c64/art/intro.png`, made to be edited by hand ([porting.md](docs/porting.md)).

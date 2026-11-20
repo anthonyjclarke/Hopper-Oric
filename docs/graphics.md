@@ -82,9 +82,13 @@ two middle pixel columns (`W6`).
 | [sound-menu.png](images/screens/sound-menu.png)     | The sound menu                            |
 | [redefine.png](images/screens/redefine.png)         | Redefining the keys                       |
 | [credits-done.png](images/screens/credits-done.png) | The credits, with the redefined key names |
-| [hiscores.png](images/screens/hiscores.png)         | The hi-score table, Enhanced chosen       |
-| [version.png](images/screens/version.png)           | The same after F1: Classic chosen         |
+| [hiscores.png](images/screens/hiscores.png)         | The hi-score table (Classic)              |
+| [enh-hiscores.png](images/screens/enh-hiscores.png) | The hi-score table in Enhanced (V7 font)  |
+| [instructions.png](images/screens/instructions.png) | The Enhanced instructions page (F3)       |
 | [enh-play.png](images/screens/enh-play.png)         | Play in Enhanced: multicolour lanes       |
+| [enh-road.png](images/screens/enh-road.png)         | Enhanced: the frog crossing the road      |
+| [enh-later.png](images/screens/enh-later.png)       | Enhanced: riding the turtles              |
+| [enh-ride.png](images/screens/enh-ride.png)         | Enhanced: on the top log                  |
 | [enh-hops.png](images/screens/enh-hops.png)         | The death flash in Enhanced               |
 | [sheet-start.png](images/screens/sheet-start.png)   | The sheet-start signs                     |
 | [play.png](images/screens/play.png)                 | Play                                      |
@@ -100,8 +104,9 @@ two middle pixel columns (`W6`).
 
 ### The C64 Start-Up Picture
 
-Not in the Oric game. `tools/make_intro.py` makes a multicolour bitmap from the cover painting and the PSS logo cut from
-the inlay; the C64 shows it at start-up and between the hi-scores and the credits ([porting.md](porting.md)).
+Not in the Oric game: a multicolour bitmap made from the cover painting and the PSS logo, shown at start-up and between
+the hi-scores and the credits. How it was made, and how to edit its master `c64/art/intro.png`, is in
+[porting.md](porting.md#decisions).
 
 ![The start-up picture in VICE](images/screens/intro.png)
 

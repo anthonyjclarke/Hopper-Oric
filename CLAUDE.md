@@ -57,12 +57,41 @@ Reconstructed source of P.S.S.'s HOPPER (1983), v1.0 = byte-identical to
 - Rows with attributes past column 1 get colour only from a row parse. Plain
   `Idle` never parses: `CheckMenuKeys` runs in counted loops and would slow.
   Uncounted waits that draw such text use `IdleParse`.
-- `c64/src/intro.rle` is generated: `make c64-intro` (python3.14 + Pillow),
-  from `docs/images/original/cover.png` (a straight scan) and `inlay.png`.
+- `c64/src/intro.rle` is generated: `make c64-intro` (python3.14 + Pillow)
+  packs the hand-editable master `c64/art/intro.png` (320x200, C64 palette,
+  black + 3 colours per 8x8). `--from-scans` redraws the master from the
+  cover scans and overwrites hand edits: ask first.
   Unpacked once into VIC bank 3 (`$C000`, `$C400` colour copy, `$E000`
-  bitmap): keep bank 3 free. `ShowPicture` runs with IRQs masked.
-- Main memory below `$8000` is nearly full (BSS ends ~`$7E3E`): put new
-  tables in `HIDATA` (`$9000`+, not VIC-visible). The row IRQ's `$D016`
-  store must stay before `$D021` (a later one misses the badline).
+  bitmap; `$C800` `C64FontCopy`): keep the rest of bank 3 free.
+  `ShowPicture` runs with IRQs masked.
+- Main memory below `$8000` is nearly full (BSS ends ~`$7FAF`): put new
+  code and tables in `HIDATA` (`$9000`+, not VIC-visible).
+- Row IRQ: `$D018`/`$D021`/`$D016` go back to back from registers saved in
+  zero page (not pushed). No cycle to spare either way: 1 earlier shows in
+  the row above's last pixels, and with the frog's sprite DMA the third store
+  starts by cycle 7 of 8. Anything added before them: re-measure (monitor
+  line/cycle at the stores, `make c64-flicker`). In Enhanced play
+  `IrqArmPlay` points the IRQ vector at the order whose last register doesn't
+  change (`IrqBgLast` river, `IrqCsLast` road); `SetRowMap` resets it.
+  `$D022/$D023` land after the badline, so non-multicolour rows preload the
+  next row's. A marking's paper restore waits on `$D012` in a loop entered
+  before the badline stall; its operands are patched by `IrqArm`.
+- Enhanced play blanks the glyphs of the frog (`$3A-$3D`) and fly (`$7C/$7D`):
+  sprites draw them (`sprites.s`, images `make c64-sprites`). The game still
+  draws and collides with the characters; don't rely on those glyphs there.
+- `WaitCycles`: under `DelayX` (`catchUp`) debt adds up and Presents thin
+  out to keep Oric pace; play (`FrameDelay`) presents every frame and drops
+  unpaid debt. Don't change play's rule: smooth scrolling depends on it.
+- `make c64-flicker` checks for one-frame glitches; the Enhanced test build
+  steers the frog (`Drive`), so its captures follow the drive, not frames.
+- Enhanced attract screen (F1, `sprites.s`): `attractOn` gates it;
+  `SetRowMap` clears it. Scroller row 24 / frog row 19 keep sprite DMA off
+  the scroller row's IRQ.
+- F1 flips the version only on the instructions page (`versionShown`);
+  elsewhere `TakeF1` just drops it. A flip restarts the attract loop.
+- Enhanced instructions page (F3): `tools/instructions_page.py` writes
+  `c64/src/instrpage.inc`. Its frames borrow the codes of `{` `}` `|` `~`
+  `#` and backtick (`LendPageGlyphs`; `SetRowMap` returns them): no page
+  text or key name may use them. `SPARE` (`$8780`) is after the sprites: never in `SPRDATA`.
 - Test with `make c64-smoke` (scripted keys, `c64/src/autotest.s`); headless
   VICE has no sound.

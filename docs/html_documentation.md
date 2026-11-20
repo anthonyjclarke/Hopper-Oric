@@ -32,6 +32,7 @@ Run from the repository root, in this order. The figure tools need Pillow: on th
 |:----------------------------|:-----------------------------------------|:-----------------|:---------------------------|
 | Build the Oric tape         | `make verify`                            | cc65             | `build/HOPPER.TAP`, labels |
 | Build the C64 port and test | `make c64-smoke`                         | cc65, VICE       | `c64/build/`               |
+| Check for display glitches  | `make c64-flicker`                       | VICE, Pillow     | –                          |
 | Capture the screens         | `python3 docs/tools/capture_screens.py`  | VICE (`x64sc`)   | `docs/images/screens/`     |
 | Decode the Oric figures     | `python3 docs/tools/render_graphics.py`  | Pillow, VICE ROM | `docs/images/graphics/`    |
 | Draw the appendix figures   | `python3 docs/tools/render_oric.py`      | Pillow           | `docs/images/graphics/`    |
@@ -52,7 +53,7 @@ regenerates it whenever a source changes. `just docs-graphics` and `just docs-sc
 
 ---
 
-## How the Pictures Are Made
+## How the Pictures and Sounds Are Made
 
 - **Screenshots.** `capture_screens.py` runs the captures listed in `tools/c64_screens.py`: each boots the scripted test
   build (`c64/src/autotest.s` presses the keys) in a fresh headless `x64sc` with default settings, warp, no sound and
@@ -76,6 +77,11 @@ regenerates it whenever a source changes. `just docs-graphics` and `just docs-sc
   VICE run.
 - **The start-up picture's design.** `tools/make_intro.py` writes `docs/images/graphics/intro-design.png` with
   `c64/src/intro.rle` (`make c64-intro`).
+- **Recordings.** `make c64-sound` (`tools/c64_sound.py`) runs the sound build (`-D AUTOTEST_SOUND`: the test script's
+  menus, then the four in-game tunes in order) twice: headless in warp, where the monitor finds when each sound starts,
+  then with VICE's window minimised, recording its WAV output in real time (about three minutes; VICE writes no sound
+  in console mode). It cuts the WAV at those times and converts each clip to AAC with macOS `afconvert`, into
+  `docs/sound/`. The handbook embeds them like images (`![label](sound/tune-0.m4a)`).
 
 ---
 

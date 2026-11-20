@@ -16,34 +16,24 @@ RESET path (`NmiHandler`, `WarmStart`), which doesn't touch the platform's zero 
 enhancement will test it, and with it clear the platform runs exactly today's code paths. There is one `.prg` with both
 looks loaded all the time, so flipping costs nothing but a redraw.
 
-`TitleTickC64`, which already replaces the game's `jsr CheckMenuKeys` in `TitleScroll` (`$2938`), does three things for
-the switch:
+The switch is on the instructions page only. `ScanRomKey` reports F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like
+any other key, so a held F1 counts once. `Present` checks `ROM_KEY` while the ROM interrupt is on (`zRomIrq`, every
+screen but play) and calls `TakeF1`, and `ReadRomKey` makes the same check after its `Idle`, for an F1 that arrives
+just after the draw (it reloads `ROM_KEY` before it returns: the game's key waits branch on its flags). `TakeF1` always
+takes the key out, so the game's key waits never see F1, and flips only when `versionShown` is set: by
+`DrawVersionLine` on Classic's page once the frog has laid it down, and by `EnhancedPage` at once. `SetRowMap` clears it
+on every new screen. A flip clears the screen, inverts `zEnhanced`, changes the font (`SetFontC64`, V7: the screen is
+blanked for a couple of frames), silences the sound, resets the stack and starts the attract loop again
+(`AttractLoop`), so the page comes back in the new look: Classic's frog walk or Enhanced's page (F3).
 
-1. On the screen's first tick (`titleSteps` still 0) it calls `DrawVersionLine`. The line is drawn there and not in
-   `HiscoreTableC64`, because the name entry screen also draws the table, and doesn't show the line.
-2. Before `CheckMenuKeys`, `VersionKeys` looks for a flip: F1, or a new push of the joystick left or right
-   (edge-detected in `joyLR`). `ScanRomKey` reports F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like any other key,
-   so a held F1 flips once.
-3. On a flip, or when `versionReq` says F1 flipped it elsewhere, it sets `titleSteps` back to 1, so the 15-second
-   attract timer starts again, and falls into `DrawVersionLine`.
-
-F1 works on every screen before a game. `Present` checks `ROM_KEY` while the ROM interrupt is on (`zRomIrq`, every
-screen but play) and calls `TakeF1`, which takes the key out and runs `FlipVersion`: it inverts `zEnhanced`, changes
-the font (`SetFontC64`, V7: the screen is blanked for a couple of frames meanwhile) and sets `versionReq` for the home
-screen's line. So the menus, the credits and name entry flip in place, and the game's key waits never see F1.
-`ReadRomKey` makes the same check after its `Idle`, for an F1 that arrives just after the draw, and reloads `ROM_KEY`
-before it returns: the game's key waits branch on its flags. The start-up picture runs with interrupts masked and reads
-the keyboard itself: `ShowPicture` returns `PIC_F1` for F1, and `TitleTickC64` flips and goes to the home screen
-(`HiscoreScreen`, `$296B`); at power-up `Start` just clears `zEnhanced`.
-
-`DrawVersionLine` writes row 25 of the Oric screen (`SCREEN` + 1000) from `VersionText`: a cyan ink attribute and `[F1]
+`DrawVersionLine` writes row 17 of the Oric screen (`versionAt`, set by `CreditsEndC64`) from `VersionText`: a cyan ink attribute and `[F1]
 VERSION`, then each version name after a blue ink attribute. For the chosen one it makes the attribute white and sets
 bit 7 of each character, the Oric's inverse, which the port shows as black on white. Because the row starts with a
 character and has attributes further in, `ScanRow` sends it to `ParseRow` on its first copy, so it shows in the right
 colours at once ([porting.md](porting.md#decisions)).
 
-`make c64-smoke` presses F1 on the home screen (`c64/src/autotest.s`), and its `hiscores` and `version` captures show
-both states. The game it then starts is in Classic.
+`make c64-smoke` presses F1 on the Enhanced page (`c64/src/autotest.s`): its `instructions` capture shows the page,
+and `credits` and `credits-done` the Classic page that follows. The game it then starts is in Classic.
 
 ---
 
@@ -75,18 +65,51 @@ there moves the whole attract loop.
 
 **Built (V6):** the road markings need no extra interrupts. In the interrupts for C64 rows 18 and 20 (`MarkRow`, Oric
 rows 20 and 23, below the hidden rows 19 and 22), when that row shows multicolour lanes (`rowCset` = `CS_MC`, so not the
-sheet-start signs), the handler waits about 25 cycles, sets `$D021` to grey, waits 64 cycles and sets the row's paper
-back. The first line of a text row is a badline, so both stores land in the side border and exactly one raster line
-turns grey, on PAL (63 cycles a line) and NTSC (65). Without the 25-cycle lead the first store landed mid-line and left
-an 8-pixel grey dash on the line above. About 100 cycles a frame.
+sheet-start signs), the row's first line is grey. `FineRow` sets `rowIrqBg` for those rows to grey (`MARK_COLOUR`),
+and the interrupt stores `rowIrqBg`, not `rowPaper`, at the row boundary, so the grey starts exactly with the row.
+Straight after the boundary stores it puts the row's real paper back as the row's second line starts. The first line
+of a text row is a badline, which stalls the CPU to near the line's end, and the frog's sprites take more cycles right
+after it, so counting cycles from the boundary left the paper anywhere up to 8 characters into the second line when the
+frog was near. The interrupt instead waits for the raster to pass the badline (`cpx $D012`, `bcs`), with the loop
+already running before the stall: the line and the paper are immediates in that code, which `IrqArm` writes at the end
+of the row interrupt above (`IrqLine` 0 for a row without a marking, which skips the wait). The line is the lane's top
+pixel line, which the vehicles leave nearly empty, so each lane's traffic sits between
+two lines. (The first version waited 25 and then 64 cycles after the boundary; once V4 and V7 had added code ahead of
+it, the grey had drifted to the lane's third line, across the tops of the cars.) About 30 cycles a frame.
 
-**Built (V4):** every row interrupt writes `$D016` from `rowCtl2` (multicolour and fine scroll), 4 cycles before the
-`$D021` store, in the right border of the row above's last line. Written after `$D018`, as the multicolour bit first
-was, it landed on the row's first line, a badline, too late: that line stayed unshifted. To load it ahead of the delay
-the paper now goes through a patched `lda #` (`@paper`), and `EV_DELAY_PAL` / `EV_DELAY_NTSC` drop from 3 to 1, so the
-other stores move by only 2 cycles. `SetRowMap` fills `rowCtl2` with `$08`, or `$18` in Enhanced play; `Present` sets
-the lane rows ([enhanced_graphics.md](enhanced_graphics.md#v4--smooth-scrolling-lanes)). Still planned: the F1
-scroller's fine scroll.
+**Built (V4):** every row interrupt also writes `$D016` from `rowCtl2` (multicolour and fine scroll). `SetRowMap` fills
+`rowCtl2` with `$08`, or `$18` in Enhanced play; `Present` sets the lane rows
+([enhanced_graphics.md](enhanced_graphics.md#v4--smooth-scrolling-lanes)). Still planned: the F1 scroller's fine
+scroll.
+
+**The store window.** The row's three values (`$D018`, `$D021`, `$D016`) are loaded into Y, A and X first and stored
+back to back, 4 cycles apart. They must land between the end of the row above's last line and the start of this row's
+first, a badline, which stalls the CPU from near its start; the interrupt itself starts up to 7 cycles late, depending
+on the instruction it breaks into. When V4 first spread the stores over 10 cycles, the character set sometimes landed
+late, and that row's first line was drawn with the old set: one line of wrong glyphs on double-height text and
+multicolour lanes, a flicker every few frames. Measured in VICE (the monitor's line and cycle at each store, over
+thousands of row interrupts), the first store now starts at cycle 49–55 of the line and the third by cycle 0 of the
+next. A store must start by cycle 8 of the next line: one that starts later reads during the badline and waits for its
+end. One cycle earlier and the first store lands before the row above's last line ends (a changed paper shows in its
+last 2 pixels on the menus), so the interrupt saves its registers in zero page (`zIrqA`, `zIrqX`, and `zIrqY` with
+an absolute store to give one cycle back) instead of pushing them, which put the stores 3 cycles earlier than before.
+`IRQ_PAD` `nop`s, for experiments, would move them 2 cycles later each; it is 0.
+`$D022`/`$D023` are written after the stall, too late for a row's first line, so a row without multicolour cells (the
+water between river lanes, the verges) writes the next row's colours as well, and the lane tops no longer flicker.
+
+**Sprites and the interrupt.** A sprite takes memory cycles from the CPU at the end of every raster line it covers,
+where the row interrupt stores, and the frog's sprites (21 lines tall) always cover two or three row boundaries. The
+frog's DMA stops the CPU at about cycles 56–62. When it catches the first store, all three come after it, and the third
+started at cycle 8 or 9 of the next line: with the frog on the river, a lane's first line in the row above's fine
+scroll for a frame now and then. Zero page saving brought that to cycle 4–7, and in Enhanced play the third store is a
+register that doesn't change at that boundary, so a late one does no harm. `IrqArmPlay`, called from `IrqArm` for the
+next row, compares its character set and paper with the row above's and points the IRQ vector at one of three copies
+of the interrupt's start: `IrqBgLast` (paper last: the water between river lanes, where the set and the scroll change),
+`IrqCsLast` (character set last: the road, where a marking's paper and the scroll change; it has its own copy of the
+marking loop, as a `jmp` to the shared one let the badline catch it before the loop ran) or `IrqHandler` ($D016 last:
+the verges, where all three change, and every screen outside play). `SetRowMap` sets the vector back to `IrqHandler`
+(`IrqDefault`). Checked with `make c64-flicker` and 300 more frames of play. The sprite Y of a text row is
+`FIRST_TEXT_LINE` − 1 (`TEXT_TOP`): a sprite shows from the raster line after its Y.
 
 ---
 
@@ -110,16 +133,28 @@ frame of about 30,000 that the Oric mostly spent waiting ([porting.md](porting.m
 
 ## Sprites
 
-`UpdateSprites` runs once a frame, from the frame interrupt, when `zEnhanced` is set and a game is on:
+**Built (V2, V3)** in `c64/src/sprites.s`, whose code and variables are in `HIDATA`:
 
-- **Frog.** Screen position from `frog_row` and `frog_col`, through the play row map. When either changes, the displayed
-  position moves to the new one over 4–5 frames on an arc. Two sprites: multicolour body and hires outline.
-- **Fly.** Position from `fly_ptr` while `fly_on` is set, two frames alternating.
-- **Death.** The splat (road) or splash (river) in place of the frog during the death sequence.
-- **Home screen.** The hopping frog of F1 uses the same frog sprites.
+| Routine         | Called from                     | Does                                                             |
+|:----------------|:--------------------------------|:-----------------------------------------------------------------|
+| `SprSetup`      | `SetRowMap`                     | Sprites off; in Enhanced play, colours and modes for the four    |
+| `SprTarget`     | the end of `Present`            | Where the frog and fly are (`PosOf`), as just copied             |
+| `SprTick`       | the frame interrupt             | Move the frog (ride, hop, jump), flap the fly, set the registers |
+| `SetFrogGfxC64` | `SetFrogGfx` (`$0F20`, patched) | Enhanced play: the sprite frame and blank glyphs; else as before |
+| `SplatDrawC64`  | `SetSplatGfx` (`$211B`)         | Enhanced play: the splat frame, glyphs blank again; `DrawFrog`   |
 
-Sprite pointers are at `$83F8`–`$83FF`, after the VIC screen at `$8000`. Sprites go off whenever `zEnhanced` is clear,
-on menus and while the start-up picture shows.
+| Sprite | Shows        | Mode                                      |
+|:-------|:-------------|:------------------------------------------|
+| 0      | Frog outline | Hires black, 1 pixel up and left of 1     |
+| 1      | Frog body    | Multicolour: green, light green, yellow   |
+| 2      | Fly body     | Hires black                               |
+| 3      | Fly wings    | Hires light grey, two frames              |
+
+Sprite pointers are at `$83F8`–`$83FF`, after the VIC screen at `$8000`. Sprites are off everywhere but Enhanced play
+(`SprSetup` from every `SetRowMap`). The splat replaces the frog for a death on the road and in the river alike; a
+splash is not drawn. The row interrupts still land in the border with up to four sprites on the line: VICE shows no
+seam or late colour change. The images load straight into `$8400`–`$877F` (segment `SPRDATA`), so the `.prg` now
+carries them in its `$8000`–`$8FFF` stretch.
 
 ---
 
@@ -131,22 +166,25 @@ free.
 
 | Region          | Size    | VIC sees it | Use                                  |
 |:----------------|:--------|:------------|:-------------------------------------|
-| `$76D9`–`$7E3E` | 1,894 B | No          | Used: V0, V1, V4, V6, V7 code, BSS   |
-| `$7E3F`–`$7FFF` | 449 B   | No          | Free                                 |
-| `$8400`–`$87FF` | 1,024 B | Yes         | 16 sprite blocks: frog               |
+| `$76D9`–`$7F7D` | 2,213 B | No          | Used: V0–V7 hooks, code and BSS      |
+| `$7F7E`–`$7FFF` | 130 B   | No          | Free                                 |
+| `$8400`–`$877F` | 896 B   | Yes         | Used: 14 sprite blocks (V2, V3)      |
+| `$8780`–`$87D8` | 89 B    | Yes         | `SPARE`: page frame glyphs (F3)      |
+| `$87D9`–`$87FF` | 39 B    | Yes         | Free                                 |
 | `$8800`–`$8FFF` | 2,048 B | Yes         | Used: multicolour play set (V1)      |
-| `$9000`–`$9722` | 1,827 B | No          | Used: V4 tables; V7 fonts            |
-| `$9723`–`$9FFF` | 2,269 B | No          | SID tables, title tune, disk code    |
+| `$9000`–`$9D72` | 3,443 B | No          | Used: V4 tables, font, sprites, F1, F3 |
+| `$9D73`–`$9FFF` | 653 B   | No          | Spare (the Enhanced test code)       |
 | `$B800`–`$B9FF` | 512 B   | Yes         | 8 sprite blocks: splat, splash, fly  |
-| `$C800`–`$CFFF` | 2,048 B | Bank 3 only | Spare                                |
+| `$C800`–`$CAFF` | 768 B   | Bank 3 only | `C64FontCopy` (V7), filled at start  |
+| `$CB00`–`$CFFF` | 1,280 B | Bank 3 only | Spare                                |
 | `$D000`–`$DFFF` | 4,096 B | No          | Spare (RAM under I/O)                |
 | `intro.rle`     | 6,739 B | No          | Spare after `UnpackPicture` has run  |
 
-The BSS now ends at `$7E3E` (`c64/build/hopper.map`), leaving 449 bytes below `$8000`: new tables go in `HIDATA`. Since V7, Enhanced data goes in
-the `HIGH` area at `$9000`–`$9FFF` (segment `HIDATA`, `c64/cfg/c64.cfg`). The one-file `.prg` therefore also covers
-`$8000`–`$8FFF` (the `GAP` area, zeros), which is harmless because the VIC screen and the multicolour set are written at
-run time. The `.prg` grew from 29 KB to 35 KB. The full set of changes needs about 9.5 KB, so it still fits with the
-packed picture's space in reserve.
+The BSS now ends at `$7F7D` (`c64/build/hopper.map`), leaving 130 bytes below `$8000`: new code and tables go in
+`HIDATA`. Since V7, Enhanced data goes in the `HIGH` area at `$9000`–`$9FFF` (segment `HIDATA`, `c64/cfg/c64.cfg`). The
+one-file `.prg` therefore also covers `$8000`–`$8FFF` (the `GAP` area, zeros), which is harmless because the VIC screen
+and the multicolour set are written at run time. The `.prg` grew from 29 KB to 35 KB. The full set of changes needs
+about 9.5 KB, so it still fits with the packed picture's space in reserve.
 
 ---
 
@@ -165,19 +203,37 @@ on. About 0.4 KB.
 There is one build, `make c64`, and the `.prg` holds both versions. `make c64-smoke` builds two scripted test programs
 from the same key script (`c64/src/autotest.s`):
 
-| Build                      | Script                                          | Captures                            |
-|:---------------------------|:------------------------------------------------|:------------------------------------|
-| `c64/build/test/`          | F1 on the home screen, then play in Classic     | `hiscores`, `version`, `play`…      |
-| `c64/build/test-enhanced/` | `-D AUTOTEST_ENHANCED`: no F1, play in Enhanced | `enh-play`, `enh-hops`, `enh-later` |
+| Build                      | Script                                        | Captures                            |
+|:---------------------------|:----------------------------------------------|:------------------------------------|
+| `c64/build/test/`          | F1 on the Enhanced page, then Classic         | `instructions`, `hiscores`, `play`… |
+| `c64/build/test-enhanced/` | `-D AUTOTEST_ENHANCED`: no F1, `Drive` steers | `enh-play`, `enh-road`, `enh-ride`… |
+
+In the Enhanced build the frog is not steered by fixed key presses but by `Drive` (`c64/src/autotest.s`): from frame
+3030, each frame it looks at the screen where an UP hop would land and hops only when that is safe. On the road it wants
+the frog's columns clear in both rows of the lane, with 8 more columns towards the oncoming traffic and 2 on the other
+side, unless traffic is within 4 columns of where the frog stands, when its own columns are enough; on the river it
+wants a log or turtle under the frog's columns and one either side. It stops on the top river lane and rides it. So the
+frog crosses the road, rides the turtles and logs and is carried off the end of the top log, and the captures cover
+hops, riding and the edge death without key timings that a few cycles would break. The test code sits in `HIDATA`, out
+of main memory.
+
+`make c64-flicker` (`tools/c64_glitch.py`) captures consecutive frames of both test builds and fails on
+one-frame glitches: the sound menu (a frame that differs from both neighbours, which match), the hi-score title (its two
+double-height rows must move in the same frame) and Enhanced play (pixels on one line of a row only that the lanes'
+sideways movement doesn't explain, over 236 frames including the frog crossing the road; and each road marking one whole
+grey line that doesn't run on into the next). The captures run in parallel, about three minutes. It was checked against
+the faults it looks for: the menu check fails with the row interrupt's stores late (`IRQ_PAD` 5), the title check with
+the title sync off, the marking check with the paper put back a line late.
 
 `tools/c64_screens.py` picks the program by the capture's name (`enh-*`). Classic captures are compared by eye with the
 previous build's: the few cycles Enhanced adds to shared paths can move a capture by a frame. Still to check by hand in
-VICE: real F1 and joystick presses (F1 on the picture, which reads the keyboard itself, can't be scripted), RUN/STOP
-in a game, RESTORE, a full sheet in Enhanced, and NTSC.
+VICE: real F1 and joystick presses, RUN/STOP
+in a game, RESTORE, a frog home and a full sheet in Enhanced, and NTSC.
 
 The key script leaves at least 25 frames between keys, and 80 between the sound menu and the controls menu: keys
 injected at fixed frames are lost if they arrive before the screen that wants them, and the old 15-frame gaps broke as
-soon as the code took a few more cycles. F1 goes in at frame 2500 and the game starts at 2600.
+soon as the code took a few more cycles. F1 goes in at frame 520, on the Enhanced page, and the game starts at 2600;
+the Enhanced build, whose attract loop runs ahead (its page comes at once), starts its game at 2480.
 
 ---
 
@@ -188,5 +244,4 @@ are removed from there as each one is written.
 
 | Name            | Kind    | For                                        |
 |:----------------|:--------|:-------------------------------------------|
-| `UpdateSprites` | Routine | Frog, fly and death sprites, the hop tween |
 | `rowSpace`      | Table   | Texture character for `$20`, per row       |

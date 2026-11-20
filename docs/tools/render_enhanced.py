@@ -3,7 +3,7 @@
 
   python3 docs/tools/render_enhanced.py
 
-The Enhanced version is planned, not built, so these are mock-ups, not VICE captures. The screens are the real ones:
+These are mock-ups, not VICE captures: each is replaced in the chapters by a capture once its change is built. The screens are the real ones:
 the game's own routines draw them on tools/cpu6502.py (tools/oric_screens.py), and the C64 shows them the way the
 port does (rows hidden per screen, glyphs widened from 6 to 8 pixels by doubling the two middle pixels, the C64 font,
 the Pepto palette). On top of that the script applies each planned enhancement as docs/enhanced_graphics.md describes
@@ -367,10 +367,6 @@ def draw_home(game, enhanced, cv, t=0):
                     if g[gy][px]:
                         ci = CYCLE[((y + t // 40) >> 1) % len(CYCLE)] if enhanced and cell['dh'] else O2C[cell['ink']]
                 cv.put(x, y, ci)
-    sel = vis.index(25) * 8                                 # V0: the version line, as DrawVersionLine draws it
-    text(game, cv, '[F1] VERSION', 3 * 8, sel, CYAN, BLACK)
-    text(game, cv, ' CLASSIC ', 16 * 8, sel, BLUE if enhanced else BLACK, BLACK if enhanced else WHITE)
-    text(game, cv, ' ENHANCED ', 26 * 8, sel, BLACK if enhanced else BLUE, WHITE if enhanced else BLACK)
     if enhanced:                                            # F1: raster bars, scroller on row 23, hopping frog
         for yb in (-3, 17):
             for k in range(2):

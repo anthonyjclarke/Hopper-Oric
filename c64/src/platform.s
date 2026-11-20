@@ -14,15 +14,18 @@
         .import SetFontC64
         .import InitVideo, InitTiming, InitInput, InitSound, SetRowMap, Idle, IdleParse
         .import ColdStart, InitGame, SoundMenu, CreditsIntro, DrawHiScoreTable
-        .import CheckMenuKeys, AttractLoop, StartGame
+        .import CheckMenuKeys, AttractLoop, StartGame, ControlsMenu, ClearScreen, credits_text
+        .import Unpack, LendPageGlyphs, PageData, AttractStart
+        .import PAGE_KEY_LEFT, PAGE_KEY_RIGHT, PAGE_KEY_UP, PAGE_KEY_DOWN
         .import StepFrog, LoseLife, L118A
-        .import GameOver, SilenceAll, HiscoreScreen
+        .import GameOver, SilenceAll, CreditsEnd
         .import PROG_START, PROG_END
         .import __GAME_LOAD__, __GAME_RUN__, __GAME_SIZE__, __BSS_RUN__, __BSS_SIZE__
         .export Start
         .export InitGameC64, RomIrqOn, ReadRomKey, ReadMenuKey
         .export SoundMenuC64, CreditsIntroC64, HiscoreTableC64, TitleTickC64, EraseFlyC64
         .export StepFrogC64, CarryFrogC64, TakeF1, QuitGameC64
+        .export CreditsEndC64, versionShown, MenuKeyC64
 
         .assert PROG_START = $0500, error, "the game must run at $0500"
         .assert PROG_END = $30D5, error, "the game must end at $30D4"
@@ -117,11 +120,6 @@ Start:
         jsr     UnpackPicture           ; into bank 3, kept for the attract loop
 .ifndef AUTOTEST
         jsr     ShowPicture             ; the start-up picture (intro.s)
-        cmp     #PIC_F1                 ; F1 there: start in Classic
-        bne     :+
-        lda     #0
-        sta     zEnhanced
-:
 .endif
         jsr     InitVideo
         jsr     InitInput
@@ -140,7 +138,8 @@ InitGameC64:
         lda     #0
         sta     zRomIrq
         sta     zWaitHook
-        lda     #MAP_GAME
+        jsr     ClearScreen             ; the page leaves before its frame pieces
+        lda     #MAP_GAME               ; go back (SetRowMap), not as { } ~ |
         jsr     SetRowMap
         jmp     InitGame
 
@@ -240,23 +239,32 @@ ReadRomKey:
         rts
 
 ;------------------------------------------------------------------------------
-; TakeF1 - F1 in ROM_KEY on a front-end screen: take it out and flip the
-; version. Called by Present (every screen while the ROM IRQ is on: menus,
-; credits, hi-scores, name entry) and ReadRomKey. Clobbers A, X, Y and the
-; video temporaries, as Present does.
-; FlipVersion - flip zEnhanced and the font with it; versionReq tells the
-; hi-score screen to redraw its version line.
+; TakeF1 - F1 in ROM_KEY on a front-end screen: take it out, so no key wait
+; of the game sees it, and flip the version only where the version line is
+; on the screen (versionShown): the credits and instructions, once the frog
+; has laid them down (CreditsEndC64). Called by Present (every screen while
+; the ROM IRQ is on: menus, credits, hi-scores, name entry) and ReadRomKey.
+; Clobbers A, X, Y and the video temporaries, as Present does.
 ;------------------------------------------------------------------------------
 TakeF1:
         lda     #0
         sta     ROM_KEY
-FlipVersion:
-        lda     zEnhanced
-        eor     #$FF
-        sta     zEnhanced
-        lda     #1
-        sta     versionReq
-        jmp     SetFontC64              ; V7: the font goes with the version
+        lda     versionShown
+        bne     :+
+        rts
+:       jsr     ClearScreen             ; flip, the font with it (V7), and show
+        lda     zEnhanced               ; the instructions again in the new look:
+        eor     #$FF                    ; Classic's frog-laid credits or the
+        sta     zEnhanced               ; Enhanced page. The stack is reset, as
+        jsr     SetFontC64              ; for 3 (MenuKeyC64); the screen is
+        jsr     SilenceAll              ; cleared first, so no frame shows the
+                                        ; page in the other font
+        lda     #HOOK_NONE
+        sta     zWaitHook
+        ldx     #$FF
+        txs
+        cli
+        jmp     AttractLoop
 
 ;------------------------------------------------------------------------------
 ; QuitGameC64 - RUN/STOP in play (C64 Remix): end the game as if the last
@@ -286,13 +294,51 @@ SoundMenuC64:
 CreditsIntroC64:
         lda     #MAP_CREDITS
         jsr     SetRowMap
-        jmp     CreditsIntro
+        bit     zEnhanced
+        bpl     :+
+        jmp     EnhancedPage
+:       jmp     CreditsIntro
+
+;------------------------------------------------------------------------------
+; EnhancedPage - in Enhanced, the credits and instructions as one page drawn
+; at once (layout C, tools/instructions_page.py) in place of the frog laying
+; down the original's: the page into the Oric screen, the chosen key names
+; into its keycaps, its frame pieces into six borrowed codes
+; (LendPageGlyphs; SetRowMap returns them), then CreditsEnd: the title frog
+; and the jingle. F1 works at once (versionShown); 1, 2 and 3 as on the
+; original page.
+;------------------------------------------------------------------------------
+        .segment "HIDATA"
+EnhancedPage:
+        lda     #<PageData
+        sta     zSrc
+        lda     #>PageData
+        sta     zSrc+1
+        lda     #<SCREEN
+        ldx     #>SCREEN
+        jsr     Unpack
+        lda     credits_text+569        ; the names ControlsMenu keeps there
+        ora     #$80                    ; (inverse: the keycap)
+        sta     SCREEN + PAGE_KEY_LEFT
+        lda     credits_text+573
+        ora     #$80
+        sta     SCREEN + PAGE_KEY_RIGHT
+        lda     credits_text+541
+        ora     #$80
+        sta     SCREEN + PAGE_KEY_UP
+        lda     credits_text+601
+        ora     #$80
+        sta     SCREEN + PAGE_KEY_DOWN
+        jsr     LendPageGlyphs
+        lda     #1
+        sta     versionShown
+        jmp     CreditsEnd
+        .segment "CODE"
 
 HiscoreTableC64:
         lda     #0                      ; TitleTickC64 times the table from here
         sta     titleSteps
         sta     titleSteps+1
-        sta     versionReq              ; the first tick draws the line anyway
         lda     #MAP_HISCORE
         jsr     SetRowMap
         jmp     DrawHiScoreTable
@@ -303,14 +349,12 @@ HiscoreTableC64:
 ; about 15 s, the start-up picture comes back and the attract loop goes
 ; round again: picture, credits and instructions, hi-scores. 1 or fire on
 ; the picture starts a game.
-; The first tick on the screen draws the version line (row 25), and F1 or
-; the joystick left/right flips Classic / Enhanced (VersionKeys).
 ;------------------------------------------------------------------------------
 TitleTickC64:
-        lda     titleSteps
-        ora     titleSteps+1
+        lda     titleSteps              ; the screen's first tick: F1, the
+        ora     titleSteps+1            ; Enhanced attract screen (sprites.s)
         bne     :+
-        jsr     DrawVersionLine
+        jsr     AttractStart
 :       inc     titleSteps
         bne     :+
         inc     titleSteps+1
@@ -321,8 +365,7 @@ TitleTickC64:
         lda     titleSteps
         cmp     #<TITLE_STEPS
         bcs     @picture
-@keys:  jsr     VersionKeys
-        jmp     CheckMenuKeys
+@keys:  jmp     CheckMenuKeys
 @picture:
         pla                             ; not back into TitleScroll
         pla
@@ -335,75 +378,48 @@ TitleTickC64:
         cli
         txa
         beq     @attract
-        cmp     #PIC_F1
-        beq     @f1
         jmp     StartGame
 @attract:
         jmp     AttractLoop
-@f1:    jsr     FlipVersion             ; F1: flip, and show the choice
-        jmp     HiscoreScreen
 
 ;------------------------------------------------------------------------------
-; VersionKeys - on the home screen: F1 (flipped already by Present or
-; ReadRomKey, which set versionReq, or still in ROM_KEY) or a new push of
-; joystick 2 left or right flips zEnhanced; then the version line is redrawn
-; and the attract timer restarts, so the screen stays while the player
-; chooses.
-;------------------------------------------------------------------------------
-VersionKeys:
-        lda     ROM_KEY
-        cmp     #KEY_F1 | $80
-        bne     @joy
-        jsr     TakeF1
-        jmp     @shown
-@joy:   lda     CIA1_PRA                ; joystick 2, low = pushed
-        eor     #$FF
-        and     #$0C                    ; left or right
-        tax
-        eor     joyLR                   ; changed since the last tick
-        stx     joyLR
-        and     joyLR                   ; and pushed now: a new push
-        bne     @flip
-        lda     versionReq              ; flipped by F1 elsewhere
-        bne     @shown
-        rts
-@flip:  jsr     FlipVersion
-@shown: lda     #0
-        sta     versionReq
-        lda     #1                      ; restart the timer (not 0: that redraws)
-        sta     titleSteps
-        lda     #0
-        sta     titleSteps+1
-        ; fall through
-;------------------------------------------------------------------------------
-; DrawVersionLine - row 25 of the Oric screen, blank on the hi-score screen:
+; DrawVersionLine - the version line at versionAt (row 17 of the credits,
+; between the address and the instructions; the only screen that shows it):
 ;   [F1] VERSION   CLASSIC   ENHANCED
-; in cyan, the chosen version inverse (a white bar), the other in blue.
+; in cyan, the chosen version inverse (a white bar), the other in blue. Sets
+; versionShown, which lets F1 flip the version until the next SetRowMap.
 ;------------------------------------------------------------------------------
 DrawVersionLine:
-        ldx     #39
-:       lda     VersionText,x
-        sta     VERSION_ROW,x
-        dex
+        lda     versionAt
+        sta     zDst
+        lda     versionAt+1
+        sta     zDst+1
+        lda     #1
+        sta     versionShown
+        ldy     #39
+:       lda     VersionText,y
+        sta     (zDst),y
+        dey
         bpl     :-
-        ldx     #VERSION_CLASSIC        ; the chosen word inverse, white ink
+        ldy     #VERSION_CLASSIC        ; the chosen word inverse, white ink
         bit     zEnhanced
         bpl     :+
-        ldx     #VERSION_ENHANCED
-:       lda     #7
-        sta     VERSION_ROW-1,x
-:       lda     VERSION_ROW,x
+        ldy     #VERSION_ENHANCED
+:       dey
+        lda     #7
+        sta     (zDst),y
+        iny
+:       lda     (zDst),y
         cmp     #$20                    ; the attribute after the word ends it
         bcc     @r
         ora     #$80
-        sta     VERSION_ROW,x
-        inx
+        sta     (zDst),y
+        iny
         bne     :-
 @r:     rts
 
         .segment "RODATA"
 
-VERSION_ROW      = SCREEN + 25*40
 VERSION_CLASSIC  = 17                   ; first column of each word's bar
 VERSION_ENHANCED = 27
 VersionText:
@@ -411,6 +427,69 @@ VersionText:
         .assert * - VersionText = 40, error, "the version line must be 40 columns"
 
         .segment "BSS"
-joyLR:          .res 1
-versionReq:     .res 1          ; flipped since the version line was drawn
+versionShown:   .res 1          ; a version line is on the screen (0 after SetRowMap)
+versionAt:      .res 2          ; where DrawVersionLine draws
 titleSteps:     .res 2
+
+;------------------------------------------------------------------------------
+; CreditsEndC64 - replaces the jsr CreditsEnd in CreditsIntro, once the frog
+; has laid down the credits: add the RUN/STOP line to the instructions, row
+; 19 above P - PAUSE (C64 Remix: RUN/STOP ends a game), and the version line
+; between the address and the instructions, then the title frog and jingle.
+;------------------------------------------------------------------------------
+        .segment "HIDATA"
+CreditsEndC64:
+        lda     #4                      ; blue ink, as the other keys
+        sta     SCREEN + 19*40 + 6
+        ldx     #RUNSTOP_LEN - 1
+:       lda     RunStopText,x
+        sta     SCREEN + 19*40 + 7,x    ; above P - PAUSE
+        dex
+        bpl     :-
+        lda     #<(SCREEN + 17*40)
+        sta     versionAt
+        lda     #>(SCREEN + 17*40)
+        sta     versionAt+1
+        jsr     DrawVersionLine
+        lda     #7                      ; and 3 for new keys under the blinking
+        sta     SCREEN + 27*40 + 14     ; PRESS [1] TO START: white ink over the
+        ldx     #NEWKEYS_LEN - 1        ; row's blink attribute, so it holds (Remix)
+:       lda     NewKeysText,x
+        sta     SCREEN + 27*40 + 15,x
+        dex
+        bpl     :-
+        jmp     CreditsEnd
+
+RunStopText:
+        .byte   "RUN/STOP - QUIT GAME"
+RUNSTOP_LEN = * - RunStopText
+NewKeysText:
+        .byte   "PRESS [3] FOR NEW KEYS"
+NEWKEYS_LEN = * - NewKeysText
+
+;------------------------------------------------------------------------------
+; MenuKeyC64 - replaces the jsr ReadRomKey in CheckMenuKeys, the key check of
+; the attract loop (picture, credits, hi-scores). 3 redefines the keys (C64
+; Remix): the controls menu on a cleared screen, entered as if 2 had been
+; pressed, then the attract loop again from the credits, which show the new
+; keys. The stack is reset: CheckMenuKeys is called from several depths.
+; Anything else returns as ReadRomKey, flags from A.
+;------------------------------------------------------------------------------
+MenuKeyC64:
+        jsr     ReadRomKey
+        cmp     #'3' | $80
+        beq     @redefine
+        ora     #0                      ; the callers branch on these flags
+        rts
+@redefine:
+        ldx     #$FF
+        txs
+        jsr     SilenceAll
+        cli
+        jsr     ClearScreen
+        lda     #MAP_MENU
+        jsr     SetRowMap
+        lda     #'2' | $80              ; ControlsMenu's key wait takes this:
+        sta     ROM_KEY                 ; straight into RedefineKeys
+        jsr     ControlsMenu
+        jmp     AttractLoop

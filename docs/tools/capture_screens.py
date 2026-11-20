@@ -19,7 +19,7 @@ import c64_screens  # noqa: E402
 
 OUT = os.path.join(ROOT, 'docs', 'images', 'screens')
 
-SMOOTH_FRAMES = range(3040, 3072)               # Enhanced play, before the frog's first hop
+SMOOTH_FRAMES = range(3072, 3094)               # Enhanced play, once the screen is drawn
 SMOOTH_CROP = (32, 59, 352, 147)                # the river: C64 rows 3-13 inside VICE's border
 
 

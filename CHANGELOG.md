@@ -4,6 +4,48 @@
 
 ### Added
 
+- C64 Enhanced attract screen (F1): in Enhanced the hi-score screen of the attract loop gets a colour-cycled title, lines
+  under the title and round a scroller on row 24, and the sprite frog hopping along row 19 (`AttractStart`,
+  `AttractPresent`, `AttractTitle` in `c64/src/sprites.s`; `ParseRowAtt` recolours the title right after `Present`
+  parses it, and the round-robin parse skips it). The colour is per letter, not per raster line as in the mock-up: the
+  row interrupt has no cycles to spare. `C64FontCopy` moves to `$C800` (bank 3 RAM) to make room in `HIDATA`.
+- C64 start-up picture master `c64/art/intro.png`, to edit by hand: 320×200, indexed in the C64 palette, each
+  multicolour pixel two wide. `make c64-intro` now packs it (snapping to the palette, stopping on 8×8 blocks with more
+  than black and three colours, or reducing them with `--fix`); `tools/make_intro.py --from-scans` redraws it from the
+  cover scans. The packed picture is unchanged.
+- C64 Remix item 11: **3** in the attract loop redefines the keys. `MenuKeyC64` (patched over the `jsr ReadRomKey` in
+  `CheckMenuKeys` at `$299F`) enters the controls menu as if 2 had been pressed, then restarts the attract loop; the
+  credits add `PRESS [3] FOR NEW KEYS` under `PRESS [1] TO START`.
+- Recordings to play in the docs: the four in-game tunes, the sheet tune, the frog-home jingle, a hop, the death and the
+  low-time tone, recorded from the C64 port in VICE into `docs/sound/` (AAC) and embedded in `sound.md` and the
+  handbook. `make c64-sound` (`tools/c64_sound.py`) runs a new sound build (`-D AUTOTEST_SOUND`: the four tunes in order,
+  each `PickTune` call logged), finds each sound with VICE's monitor, records the run in real time and cuts it.
+- C64 version switch on the instructions page only: F1 there flips Classic / Enhanced and shows the page again in the
+  new look (`TakeF1` restarts the attract loop); on any other screen it is dropped. Classic's page shows the version
+  line (`[F1] VERSION  CLASSIC  ENHANCED`, row 17) once the frog has laid it down. The version line on the menus and
+  the hi-score screen, the joystick flip on the hi-score screen (`VersionKeys`) and the start-up picture's
+  `F1 CLASSIC` / `F1 ENHANCED` sprites (`PicLabel`) are gone.
+- C64 Enhanced instructions page (F3, layout C of three mock-ups in `docs/images/enhanced/mockups/`): in Enhanced the
+  credits and instructions are one page drawn at once, a framed title, CONTROLS and HOW TO PLAY panels with the chosen
+  keys as keycaps, and the 1, 3 and F1 buttons. `tools/instructions_page.py` writes it as an Oric screen
+  (`c64/src/instrpage.inc`, 635 bytes packed); `EnhancedPage` unpacks it and lends six unused codes to line pieces for
+  the frames (`LendPageGlyphs`, returned by `SetRowMap`). New `SPARE` memory area after the sprite images (`$8780`).
+- C64 instructions list RUN/STOP: `RUN/STOP - QUIT GAME` above `P - PAUSE` on the credits (`CreditsEndC64`, patched
+  over the `jsr CreditsEnd` at `$27C0`, C64 Remix item 10).
+- `make c64-flicker` (`tools/c64_glitch.py`): consecutive VICE captures of the test builds, failing on one-frame
+  glitches on the sound menu, a tear in the hi-score title and late first lines in Enhanced play. Checked against the
+  faults it looks for (late row-interrupt stores, the title sync off).
+- The Enhanced test build steers the frog itself (`Drive` in `c64/src/autotest.s`): it hops when the landing place is
+  safe, crosses the road, rides the turtles and logs and is carried off the end of the top log. New captures `enh-road`,
+  `enh-ride`; `enh-later` now shows the frog on the turtles and `enh-hops` the death flash at frame 3900. The test code
+  moves to `HIDATA`.
+- C64 Enhanced sprite frog (V2) and fly (V3), `c64/src/sprites.s`: the frog is a multicolour sprite with a hires black
+  outline, made from the game's own `frog_gfx` and `splat_gfx` by the new `tools/frog_sprites.py` (`make c64-sprites`,
+  `c64/src/sprites.inc`, loaded at `$8400`); a hop glides over a few frames on a low arc, and on the river the frog
+  rides the lane's fine scroll. The fly flaps and bobs in its home. The game still draws and tests both as characters,
+  whose glyphs are blank in Enhanced play (`SetFrogGfx` patched at `$0F20`, `SetSplatGfx`'s `jsr DrawFrog` at `$211B`,
+  the fly's in `McBuild`). With the frog a sprite, V4's road lane under the frog glides too. Sprite code and variables
+  are in `HIDATA`; the `enh-play` capture moves to frame 3066.
 - C64 Enhanced smooth-scrolling lanes (V4): between the game's one-character steps each lane row is shifted 0–7 pixels
   with the `$D016` fine scroll, round(`lane_timer` × 8 / `lane_speeds`), so logs, turtles and traffic glide
   (`FineRow`, `FineTab`; `Present` takes each row's value with its copy, `rowCtl2`). The road lane the frog stands in
@@ -80,6 +122,12 @@
 
 ### Changed
 
+- Docs review: one home per topic, with links instead of repeats. The README is now a front page (the game, Oric,
+  Classic and Enhanced screenshots, the versions, a short history, then a quick start and pointers to the chapters); its
+  layout, build, Auric, reconstruction, quirks and memory-map sections are in `source_guide.md`, `architecture.md` and
+  `quirks.md` (new quirk 14, padding and fill patterns; the Auric and VS Code notes moved to `source_guide.md`). The
+  Redefine keys rules live in `remix.md`, the original quirks in `quirks.md`, the version switch in `enhanced.md` and
+  `enhanced_platform.md`; stale "home screen" and "keys chosen once" wording fixed.
 - The Oric appendix moves out of Reference into its own Appendix group in the handbook and index, and splits in two.
   `oric_history.md` ("History of Oric") is expanded into the full story: Tangerine and the Microtan, the Oric-1 and its
   French success, the 1983 factory fire, Edenspring and the Atmos, the peripherals, the Stratos and the receivers,
@@ -101,6 +149,63 @@
 
 ### Fixed
 
+- C64 version flip on the credits turned the title frog into `:;` `<=`: `SetFontC64` rewrote codes `$3A`–`$3D` with
+  the font. It now keeps those four glyphs as the game left them (`frogGlyphs`).
+- C64 Redefine keys took a refused key's release as a key: pressing P for UP moved on to DOWN with UP set to RUN/STOP
+  (no name in the instructions). `ScanRomKey` reported every key release as key 0 (`ROM_KEY` = `$80`): its `beq` after
+  `sta zLastKey` tested the flags of the `cmp` before, which `sta` leaves alone, so it never skipped. The name entry
+  and menus ignored code 0; `RedefineKeys` refused nothing for it. A release now reports nothing. A refused key also
+  shows CAN'T USE in red after the prompt (`RedefNote`, in `HIDATA`) until a key is accepted.
+- C64 Redefine keys lost a key typed within about 0.4 s of the one before: `WaitNoKeys` counted 5 passes of its loop,
+  each an `IdleParse` of about 4 frames, then cleared `ROM_KEY`. It now counts 5 frames by `zTick`. (The test script's
+  refused P was lost this way; the `redefine` capture moves to frame 410, showing CAN'T USE for the refused N.)
+- C64 Enhanced river and road rows had their first line in the row above's fine scroll for a frame now and then while
+  the frog sat on a row boundary (`make c64-flicker`: frames 3539 and 3585 on the river). The frog's sprite DMA stops
+  the CPU at about cycles 56–62 of the line, right where the row interrupt stores `$D018`, `$D021` and `$D016`; when
+  the interrupt was late all three came after it and the third started at cycle 9 of the next line, one cycle after the
+  badline holds it to the line's end. The interrupt now saves its registers in zero page instead of pushing them (the
+  stores 3 cycles earlier; 4 put the first one too early, in the last pixels of the row above), and in Enhanced play
+  stores last a register that doesn't change at that boundary: the paper on the river (`IrqBgLast`), the character
+  set on the road (`IrqCsLast`), picked per row by `IrqArmPlay` through the IRQ vector. Measured over 5,800 row
+  interrupts the third store now starts by cycle 7; `make c64-flicker` and 300 more play frames are clean. The
+  `controls` capture moves to frame 212, the middle of the LOUD line's lit phase.
+- C64 death flash, jingles and sheet tune ran up to twice as long as on the Oric (the death 4.5 s in Classic, 5.3 s in
+  Enhanced, against the Oric's 2.1 s), now 2.5 s. `WaitCycles` dropped any overrun a wait could not pay back, and each
+  SID frequency took a 24-step division. Under `DelayX` (`catchUp`) an overrun now adds to the debt still owed (cap 65
+  ms), the division counts as owed time (`DIVIDE_COST`), and once a `Present` overruns its wait the next ones come
+  every third frame. The division takes 16 steps and is skipped when a voice's period hasn't changed. Play
+  (`FrameDelay`) keeps a `Present` every frame and draws more often than before (every 1.2 frames in Classic, 1.4 in
+  Enhanced, from 1.5 and 2.0).
+- The handbook's audio players showed 0:00 until played: they now load each clip's length (`preload="metadata"` in
+  `build_docs.mjs`).
+- C64 Enhanced road markings drew a second, partial grey line (up to 8 characters into the lane) when the frog was near:
+  its sprite DMA and the badline stall moved the paper restore late. The row interrupt now waits for the raster to pass
+  the badline in a loop entered before the stall, with the line and paper patched in by `IrqArm` from the interrupt
+  above. `IRQ_PAD` 1 → 0: with the frog on the road, 1 still left a road row's first line in the old fine scroll about
+  one frame in 30. `make c64-flicker` now checks the markings and 200 frames of the frog crossing the road, and
+  captures in parallel.
+- C64 Enhanced frog sprite sat one line low (its outline over the status line from the bottom verge): a sprite shows
+  from the raster line after its Y, so `TEXT_TOP` is `FIRST_TEXT_LINE` − 1.
+- C64 Enhanced road markings blinked through the death flash: `FastRow` and `ParseRow` replaced a marked row's grey
+  with the new paper until the next `FineRow`. They now leave the grey and change only `rowPaper`, which the interrupt
+  puts back after the grey line.
+- C64 text and lanes flickered for a frame every few frames: a row's first pixel line was sometimes drawn with the row
+  above's character set (double-height menu text, the hi-score table, multicolour lanes) because the row interrupt's
+  `$D018` store, spread over 10 cycles with `$D016` and `$D021` since V4, could land after that badline started. The
+  three values are now loaded into registers and stored back to back after `IRQ_PAD` nops, set to 1 from VICE
+  measurements (0–4 clean on the menu, 5 late; only 0–1 clean with the frog's sprites on a row boundary; later 0). Found by decoding the user's VICE recordings and reproduced on headless captures
+  of the sound menu (8 glitches in 46 frames, now 0).
+- C64 Enhanced log and turtle tops flickered: `$D022`/`$D023` land after the badline stall, so a lane's first line
+  sometimes took the colours of the row above. A row without multicolour cells now loads the next row's colours.
+- C64 hi-score title tore now and then (scrolled top halves over old bottom halves for a frame): `Present` updated its
+  two rows while the beam was between them. With a double-height top row it now starts only with the beam past both.
+- C64 Enhanced frog sprite vanished for a frame now and then: `SprTarget` cleared `frogVis`/`flyVis` before working out
+  the positions, and a frame interrupt in between switched the sprites off. It now writes them once, at the end.
+- C64 Enhanced road markings had drifted to the third pixel line of the car lanes, across the tops of the cars, so the
+  traffic looked off the middle of the road: their fixed 25 + 64-cycle waits no longer matched once V4 and V7 added code
+  ahead of them. The row interrupt now starts a marked row grey (`rowIrqBg`, set by `FineRow`) and puts the paper back
+  straight after the boundary stores, which the row's badline holds to the end of the line: exactly the lane's first
+  line, between the lanes.
 - C64 keys stopped working, and the screen lost its colours and double height, after some F1 presses: `SetFontC64`
   wrote `$D011` back with bit 7 as it read it, the raster's bit 8, which sets the raster interrupt's line. A flip while
   the beam was below line 255 moved the interrupt to line 256 + n, which a frame never reaches, so the key scan and the

@@ -7,20 +7,21 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 
 ## Modules
 
-| File                | Holds                                                                |
-|:--------------------|:---------------------------------------------------------------------|
-| `basic_stub.s`      | `SYS 2061` and a `jmp Start`                                         |
-| `hopper.s`          | The game, patched in place (segment `GAME`, run at `$0500`)          |
-| `platform.s`        | `Start` and the hooks the patched game calls                         |
-| `zp.s`              | The platform's zero page, `$60`–`$8F`                                |
-| `timing.s`          | The CIA clock, the waits, the raster interrupt                       |
-| `video.s`           | Showing the Oric screen on the VIC-II                                |
-| `input.s`           | Keyboard, joystick, the ROM key buffer, redefining keys              |
-| `sound.s`           | The AY on the SID                                                    |
-| `intro.s`           | The start-up picture                                                 |
-| `enhanced.s`        | The C64 Enhanced look ([enhanced_platform.md](enhanced_platform.md)) |
-| `autotest.s`        | Scripted keys for the headless test build only                       |
-| `hw.inc`, `c64.inc` | C64 registers, the layout constants, hooks, row maps, timings        |
+| File                | Holds                                                                                   |
+|:--------------------|:----------------------------------------------------------------------------------------|
+| `basic_stub.s`      | `SYS 2061` and a `jmp Start`                                                            |
+| `hopper.s`          | The game, patched in place (segment `GAME`, run at `$0500`)                             |
+| `platform.s`        | `Start` and the hooks the patched game calls                                            |
+| `zp.s`              | The platform's zero page, `$60`–`$8F`                                                   |
+| `timing.s`          | The CIA clock, the waits, the raster interrupt                                          |
+| `video.s`           | Showing the Oric screen on the VIC-II                                                   |
+| `input.s`           | Keyboard, joystick, the ROM key buffer, redefining keys                                 |
+| `sound.s`           | The AY on the SID                                                                       |
+| `intro.s`           | The start-up picture                                                                    |
+| `enhanced.s`        | The C64 Enhanced look ([enhanced_platform.md](enhanced_platform.md))                    |
+| `sprites.s`         | The Enhanced sprite frog and fly (V2, V3; [enhanced_graphics.md](enhanced_graphics.md)) |
+| `autotest.s`        | Scripted keys for the headless test build only                                          |
+| `hw.inc`, `c64.inc` | C64 registers, the layout constants, hooks, row maps, timings                           |
 
 ---
 
@@ -40,11 +41,15 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 | `CreditsIntroC64` | `$2953`                  | The credits row map, then `CreditsIntro`                                          |
 | `HiscoreTableC64` | `$2971`, `$1B51`, `$1BD2` | The hi-score row map, the title timer, then `DrawHiScoreTable`                   |
 | `TitleTickC64`    | `$2938` (`TitleScroll`)  | `CheckMenuKeys`; after `TITLE_STEPS` steps the picture, then the attract loop     |
-| `VersionKeys`     | from `TitleTickC64`      | F1 or joystick left/right: flip `zEnhanced`, restart the timer                    |
-| `TakeF1`          | from `Present`           | F1 on any front-end screen: take it out of `ROM_KEY`, then `FlipVersion`          |
-| `FlipVersion`     | `TakeF1`, `VersionKeys`  | Invert `zEnhanced`, change the font (`SetFontC64`), set `versionReq`              |
+| `TakeF1`          | from `Present`           | F1: out of `ROM_KEY`; on the instructions page flip, then the page again          |
 | `QuitGameC64`     | from `ReadKeysC64`       | RUN/STOP in a game: reset the stack, `SilenceAll`, then `GameOver`                |
-| `DrawVersionLine` | from `TitleTickC64`      | The version line, row 25 of the hi-score screen ([enhanced.md](enhanced.md))      |
+| `DrawVersionLine` | `CreditsEndC64`          | The version line on Classic's instructions page, row 17                           |
+| `AttractStart`    | `TitleTickC64`           | Enhanced: the attract screen's lines, scroller row and frog (F1)                  |
+| `AttractPresent`  | end of `Present`         | F1: scroller and frog hops for the frames since the last call                     |
+| `ParseRowAtt`     | `Present`                | `ParseRow`; on the attract screen, the title's colour cycle after row 1           |
+| `EnhancedPage`    | `CreditsIntroC64`        | Enhanced: the instructions page (F3) at once, key names, frame glyphs             |
+| `CreditsEndC64`   | `$27C0`                  | The RUN/STOP, version and `[3]` lines on the credits, then `CreditsEnd`           |
+| `MenuKeyC64`      | `$299F` (`CheckMenuKeys`) | `ReadRomKey`; 3 = the controls menu, straight into Redefine keys, then the attract loop |
 | `EraseFlyC64`     | `$2A1B` (`EraseFly`)     | Erase the fly; with no fly, write to `tmp0` / `key_state`, not the 6510 port      |
 | `RedefineKeys`    | `$2F91` (`ControlsMenu`) | Choice 2: ask for the four keys                                                   |
 
@@ -55,23 +60,29 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 CIA2's timers A and B are chained into a free-running 24-bit clock of CPU cycles; `ReadClock` reads it into `zNow`. One
 C64 cycle stands for one Oric microsecond.
 
-| Routine         | Does                                                                                                                                                                                                                |
-|:----------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `InitTiming`    | PAL or NTSC, the clock, the IRQ and NMI vectors, the raster interrupt                                                                                                                                               |
-| `WaitCycles`    | Wait `zWait` cycles to a deadline, carrying any overrun (`zDebt`) into the next wait; meanwhile `Present` at most every `PRESENT_GAP` cycles, `ParseNextRow` when `PARSE_COST` is left, and the hook in `zWaitHook` |
-| `DelayXC64`     | The Oric's `DelayX`: X × `DELAYX_UNIT` cycles                                                                                                                                                                       |
-| `FrameDelayC64` | The Oric's `FrameDelay`: `game_delay` × `FRAMEDELAY_UNIT`, with `ServiceTimer` as its hook                                                                                                                          |
-| `T2Check`       | Stands in for the VIA timer 2 flag: true once per `T2_PERIOD` cycles                                                                                                                                                |
-| `AttractWait`   | The credits' wait, by the clock, with `CheckMenuKeys` as the hook                                                                                                                                                   |
-| `Idle`          | For key waits: `Present` every `IDLE_TICKS` frames                                                                                                                                                                  |
-| `IdleParse`     | As `Idle`, with a `ParseNextRow` in between                                                                                                                                                                         |
-| `IrqHandler`    | The raster interrupt (below)                                                                                                                                                                                        |
-| `NmiEntry`      | RESTORE: `jmp NMI_VECTOR`, the Oric's RESET path                                                                                                                                                                    |
+| Routine         | Does                                                                                                                                                                                                                                                                               |
+|:----------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `InitTiming`    | PAL or NTSC, the clock, the IRQ and NMI vectors, the raster interrupt                                                                                                                                                                                                              |
+| `WaitCycles`    | Wait `zWait` cycles to a deadline, carrying any overrun (`zDebt`) into the next wait (added up under `DelayX`, `catchUp`); meanwhile `Present` every `PRESENT_GAP` cycles (`PRESENT_GAP_BEHIND` when `lagging`), `ParseNextRow` when `PARSE_COST` is left, the hook in `zWaitHook` |
+| `DelayXC64`     | The Oric's `DelayX`: X × `DELAYX_UNIT` cycles                                                                                                                                                                                                                                      |
+| `FrameDelayC64` | The Oric's `FrameDelay`: `game_delay` × `FRAMEDELAY_UNIT`, with `ServiceTimer` as its hook                                                                                                                                                                                         |
+| `T2Check`       | Stands in for the VIA timer 2 flag: true once per `T2_PERIOD` cycles                                                                                                                                                                                                               |
+| `AttractWait`   | The credits' wait, by the clock, with `CheckMenuKeys` as the hook                                                                                                                                                                                                                  |
+| `Idle`          | For key waits: `Present` every `IDLE_TICKS` frames                                                                                                                                                                                                                                 |
+| `IdleParse`     | As `Idle`, with a `ParseNextRow` in between                                                                                                                                                                                                                                        |
+| `IrqHandler`    | The raster interrupt (below)                                                                                                                                                                                                                                                       |
+| `IrqBgLast`     | The raster interrupt with the paper stored last (Enhanced play, river)                                                                                                                                                                                                             |
+| `IrqCsLast`     | The raster interrupt with the character set stored last (Enhanced play, road)                                                                                                                                                                                                      |
+| `IrqArmPlay`    | From `IrqArm` in Enhanced play: the next row's marking, and the IRQ vector at the store order for it                                                                                                                                                                               |
+| `IrqDefault`    | From `SetRowMap`: the IRQ vector back to `IrqHandler`                                                                                                                                                                                                                              |
+| `NmiEntry`      | RESTORE: `jmp NMI_VECTOR`, the Oric's RESET path                                                                                                                                                                                                                                   |
 
 **The raster interrupt.** An interrupt at the last line of each text row (`RowLine`) sets `$D016`, `$D021` and `$D018`
 for the next row from `rowCtl2`, `rowPaper` and `rowCset` as they are at that moment, so a row that `Present` recolours
 or turns double height mid-frame is shown right in that frame. `rowCtl2` is `$08` but in Enhanced play, where it adds
-multicolour and the lanes' fine scroll (V4, [enhanced_platform.md](enhanced_platform.md#raster-interrupt)). The frame interrupt at line
+multicolour and the lanes' fine scroll (V4, [enhanced_platform.md](enhanced_platform.md#raster-interrupt)). The three
+stores have no cycle to spare; in Enhanced play the one stored last is a register that doesn't change at that boundary
+(`IrqArmPlay`), as the frog's sprites can push it late. The frame interrupt at line
 `FRAME_IRQ_LINE` sets row 0's, counts `zTick`, flips the blink phase every 16 frames, and runs the Oric ROM interrupt's
 jobs while `zRomIrq` is set: `ScanRomKey` and `CursorBlink`.
 
@@ -108,6 +119,7 @@ The row maps hide the three rows each screen leaves blank: menus 9–11, credits
 | `ScanRomKey`   | From the frame interrupt: a newly pressed key into `ROM_KEY` as ASCII + `$80` (`KeyAscii`); F1 is `KEY_F1`  |
 | `RedefineKeys` | Controls choice 2: prompts under the menu, fills `keys_set2` and the key names                              |
 | `WaitNoKeys`   | Before each prompt: wait until no key has been down for `RELEASE_FRAMES` frames                             |
+| `RedefNote`    | A refused key: CAN'T USE in red after the prompt, blanked when a key is accepted                            |
 
 ---
 

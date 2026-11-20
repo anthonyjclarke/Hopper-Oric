@@ -22,6 +22,7 @@
         .include "c64.inc"
 
         .export InitSound, AyWriteC64
+        .import catchUp
 
 WAVE_PULSE      = $40
 WAVE_NOISE      = $80
@@ -42,6 +43,11 @@ InitSound:
         sta     curLevel
         sta     curLevel+1
         sta     curLevel+2
+        lda     #$FF
+        ldx     #5
+:       sta     lastDivs,x              ; no frequency computed yet
+        dex
+        bpl     :-
         lda     #$FF                    ; mixer: everything off until the game sets it
         sta     ayRegs+7
         ldx     #0
@@ -204,13 +210,39 @@ SetFreq:
         lda     #$FF                    ; above the SID's top note
         sta     SID+0,y
         sta     SID+1,y
-        rts
+        jmp     @forget
 @silent:
         lda     #0
         sta     SID+0,y
         sta     SID+1,y
+@forget:
+        txa                             ; no computed frequency on this voice
+        asl     a
+        tay
+        lda     #$FF
+        sta     lastDivs+1,y
         rts
-@div:   stx     voice
+@div:   txa                             ; the same period as last time on this
+        asl     a                       ; voice (the coarse register written
+        tax                             ; after the fine one): the SID has it
+        lda     divs
+        cmp     lastDivs,x
+        bne     :+
+        lda     divs+1
+        cmp     lastDivs+1,x
+        bne     :+
+        txa
+        lsr     a
+        tax
+        rts
+:       lda     divs
+        sta     lastDivs,x
+        lda     divs+1
+        sta     lastDivs+1,x
+        txa
+        lsr     a
+        tax
+        stx     voice
         lda     zIsPAL
         beq     @ntsc
         lda     #<1064276
@@ -226,7 +258,18 @@ SetFreq:
         lda     #^1025275
 @go:    sta     divd+2
         jsr     Divide
-        ldx     voice
+        lda     catchUp                 ; under DelayX the division is C64
+        beq     @set                    ; time the Oric's AY write never took:
+        clc                             ; the next wait is that much shorter
+        lda     zDebt
+        adc     #<DIVIDE_COST
+        sta     zDebt
+        lda     zDebt+1
+        adc     #>DIVIDE_COST
+        bcc     :+
+        lda     #$FF
+:       sta     zDebt+1
+@set:   ldx     voice
         ldy     VoiceOfs,x
         lda     divd
         sta     SID+0,y
@@ -234,12 +277,16 @@ SetFreq:
         sta     SID+1,y
         rts
 
-; divd (24 bits) /= divs (16 bits). Remainder in rem.
+; divd (24 bits) /= divs (16 bits), for a divisor above divd's top byte (17
+; or more against the clock's 16): the quotient fits 16 bits, so the top byte
+; starts as the remainder and 16 steps do. Remainder in rem.
 Divide:
-        lda     #0
+        lda     divd+2
         sta     rem
+        lda     #0
         sta     rem+1
-        ldx     #24
+        sta     divd+2
+        ldx     #16
 @bit:   asl     divd
         rol     divd+1
         rol     divd+2
@@ -272,3 +319,4 @@ divd:           .res 3
 divs:           .res 2
 rem:            .res 2
 voice:          .res 1
+lastDivs:       .res 6          ; per voice, the period whose frequency the SID has

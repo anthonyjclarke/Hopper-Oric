@@ -118,7 +118,7 @@ export function buildHandbook(root = ROOT, configFile = 'docs/handbook.json') {
             const audio = { '.m4a': 'audio/mp4', '.mp3': 'audio/mpeg', '.wav': 'audio/wav' }[path.extname(target).toLowerCase()];
             if (audio) {
                 if (!media.has(target)) media.set(target, `data:${audio};base64,${read(target).toString('base64')}`);
-                return `<figure class="audio"><audio controls preload="none" src="${media.get(target)}" aria-label="${escape(text)}"></audio><figcaption>${escape(text)}</figcaption></figure>`;
+                return `<figure class="audio"><audio controls preload="metadata" src="${media.get(target)}" aria-label="${escape(text)}"></audio><figcaption>${escape(text)}</figcaption></figure>`;
             }
             if (!media.has(target)) {
                 const mime = { '.svg': 'image/svg+xml', '.png': 'image/png', '.gif': 'image/gif', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' }[path.extname(target).toLowerCase()];

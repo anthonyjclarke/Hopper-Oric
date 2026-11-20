@@ -19,8 +19,10 @@
         .include "c64.inc"
 
         .import rowMap, rowCset, curMap, RefreshCharsets, lane_speeds
+        .import rowPaper, rowIrqBg, MarkRow
         .export KeepC64Font, SetFontC64, McRowSetup, McBuild, McDynamic, rowMc1, rowMc2, mcStale
-        .export FineRow, rowCtl2
+        .export FineRow, rowCtl2, LendPageGlyphs, ReturnPageGlyphs, PageData
+        .export PAGE_KEY_LEFT, PAGE_KEY_RIGHT, PAGE_KEY_UP, PAGE_KEY_DOWN
 
         .segment "CODE"
 
@@ -40,6 +42,14 @@
 ; characters and would slide with the traffic.
 ;------------------------------------------------------------------------------
 FineRow:
+        lda     rowPaper,x              ; V6: the row IRQ's $D021, grey for
+        ldy     rowCset,x               ; a road marking (the row's first
+        cpy     #CS_MC                  ; line) when the row shows a lane
+        bne     :+
+        ldy     MarkRow,x
+        beq     :+
+        lda     #MARK_COLOUR
+:       sta     rowIrqBg,x
         lda     rowCset,x               ; only rows showing a lane (McRowSetup:
         cmp     #CS_MC                  ; not the sheet-start signs)
         bne     @none
@@ -47,12 +57,7 @@ FineRow:
         lda     RowLane,y               ; Oric row -> lane, or $FF
         bmi     @none
         tay
-        cpy     #3                      ; road lanes 0-2 are frog_row 1-3
-        bcs     @go
-        adc     #1                      ; (C = 0)
-        cmp     frog_row
-        beq     @none
-@go:    lda     lane_speeds,y
+        lda     lane_speeds,y
         asl     a
         asl     a
         asl     a
@@ -118,11 +123,12 @@ SetFont:
         rts
 
 ;------------------------------------------------------------------------------
-; SetFontC64 - after a flip on the home screen: the font of the version now
-; chosen into CHARSET, into the game's own copy at FONT_SAVE (ColdStart saved
-; it there; RestoreCharset puts it back for the menus), and into the inverse
-; and double-height sets, with the screen blanked meanwhile (a few frames).
-; About 75,000 cycles, interrupts on.
+; SetFontC64 - after a flip on the instructions page: the font of the version
+; now chosen into CHARSET, into the game's own copy at FONT_SAVE (ColdStart
+; saved it there; RestoreCharset puts it back for the menus), and into the
+; inverse and double-height sets, with the screen blanked meanwhile (a few
+; frames). The frog's glyphs $3A-$3D are the game's (the title frog there)
+; and are kept. About 75,000 cycles, interrupts on.
 ;------------------------------------------------------------------------------
 FONT_SAVE       = $3100                 ; the game's copy of codes $20-$7F
 
@@ -132,6 +138,11 @@ SetFontC64:
         sta     VIC_CTRL1               ; reads as the raster's bit 8 but writes
                                         ; the IRQ line's: keep it 0, or the
                                         ; raster IRQ never fires again
+        ldx     #4*8-1                  ; the frog's glyphs, as the game left them
+:       lda     CHARSET+$3A*8,x
+        sta     frogGlyphs,x
+        dex
+        bpl     :-
         jsr     SetFont
         ldx     #0
 :       lda     CHARSET+$20*8,x
@@ -142,12 +153,105 @@ SetFontC64:
         sta     FONT_SAVE+$200,x
         inx
         bne     :-
+        ldx     #4*8-1
+:       lda     frogGlyphs,x
+        sta     CHARSET+$3A*8,x
+        dex
+        bpl     :-
         jsr     RefreshCharsets
         lda     VIC_CTRL1
         and     #%01111111              ; (as above)
         ora     #%00010000
         sta     VIC_CTRL1
         rts
+
+;------------------------------------------------------------------------------
+; LendPageGlyphs - the Enhanced instructions page's frame pieces (PageGlyphs,
+; tools/instructions_page.py) into the six CHARSET codes it borrows
+; (PageCodes: characters no page text or key name uses). zNeedRefresh then
+; rebuilds the inverse and double-height sets (the title's sides).
+; ReturnPageGlyphs - from SetRowMap, on any new screen: put those codes back
+; from the font now in use, if they were lent. Clobbers A, X, Y, zPtr, zSrc.
+;------------------------------------------------------------------------------
+        .segment "HIDATA"
+LendPageGlyphs:
+        lda     #<PageGlyphs
+        sta     zSrc
+        lda     #>PageGlyphs
+        sta     zSrc+1
+        lda     #1
+        sta     pageLent
+        sta     zNeedRefresh
+        bne     PageGlyphCopy
+ReturnPageGlyphs:
+        lda     pageLent
+        bne     :+
+        rts
+:       lda     #0
+        sta     pageLent
+        lda     #<C64FontCopy
+        sta     zSrc
+        lda     #>C64FontCopy
+        sta     zSrc+1
+        bit     zEnhanced
+        bpl     PageGlyphCopy
+        lda     #<OricFontW6
+        sta     zSrc
+        lda     #>OricFontW6
+        sta     zSrc+1
+PageGlyphCopy:                          ; zSrc: the lent glyphs, 8 bytes each in
+        ldx     #0                      ; turn, or a font from code $20
+@code:  lda     PageCodes,x
+        sta     zPtr                    ; to CHARSET + code * 8
+        lda     #0
+        asl     zPtr
+        rol     a
+        asl     zPtr
+        rol     a
+        asl     zPtr
+        rol     a
+        adc     #>CHARSET               ; (C = 0)
+        sta     zPtr+1
+        lda     pageLent
+        beq     @font
+        txa                             ; lent: glyph X
+        jmp     @ofs
+@font:  lda     PageCodes,x             ; returned: the font's glyph for the code
+        sec
+        sbc     #$20
+@ofs:   sta     pageOfs                 ; offset = A * 8
+        lda     #0
+        asl     pageOfs
+        rol     a
+        asl     pageOfs
+        rol     a
+        asl     pageOfs
+        rol     a
+        sta     pageOfs+1
+        lda     pageOfs
+        clc
+        adc     zSrc
+        sta     @src+1
+        lda     pageOfs+1
+        adc     zSrc+1
+        sta     @src+2
+        ldy     #7
+@src:   lda     $FFFF,y
+        sta     (zPtr),y
+        dey
+        bpl     @src
+        inx
+        cpx     #PAGE_GLYPH_CODES
+        bne     @code
+        rts
+
+        .segment "SPARE"                ; the bytes after the sprite images
+pageOfs:        .res 2
+pageLent:       .res 1          ; LendPageGlyphs: the six codes hold frame pieces
+frogGlyphs:     .res 32         ; SetFontC64: CHARSET $3A-$3D kept over a flip
+        .segment "HIDATA"
+        .include "instrpage.inc"
+        .segment "CODE"
 
 ;------------------------------------------------------------------------------
 ; McRowSetup - for FastRow / ParseRow: A = the C64 ink of simple row X.
@@ -228,7 +332,12 @@ McBuild:
         bne     :+
         jsr     McInit
         inc     mcInited
-:       lda     #0
+:       lda     #0                      ; V3: the fly is a sprite, so its
+        ldx     #15                     ; characters ($7C/$7D) are blank
+:       sta     CHARSET+$7C*8,x
+        dex
+        bpl     :-
+        lda     #0
         sta     mcStale
         tax
 @blank: sta     CHARSET_MC,x
@@ -538,4 +647,5 @@ FineTab:
         .byte   0,1,1,2,2,3,3,4,5,5,6,6,7,7,0,0  ; speed 14
         .byte   0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,0  ; speed 15
         .include "oricfont.inc"
-C64FontCopy:    .res 96 * 8             ; KeepC64Font: the C64 font, codes $20-$7F
+C64FontCopy     = $C800                 ; KeepC64Font: the C64 font, codes $20-$7F (768 bytes,
+                                        ; bank 3 RAM after the picture's colours: not in the .prg)

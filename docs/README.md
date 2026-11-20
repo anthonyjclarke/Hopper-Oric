@@ -1,12 +1,11 @@
 # Hopper – Documentation
 
-*Hopper* is a *Frogger*-style arcade game for the Oric-1, written by A.J. Clarke and published on cassette in 1983 by
-Personal Software Services (PSS) of Coventry. This repository holds a byte-identical, commented ca65 reconstruction of
-the original tape, and a Commodore 64 version built from it: the Oric game code itself, every byte at its Oric address,
-re-hosted on a small C64 platform layer, with a planned Enhanced look the player can switch to.
+The chapters of the *Hopper* reconstruction: the 1983 Oric-1 game rebuilt as commented ca65 source, byte-identical to
+the tape, and its Commodore 64 version, which runs the same game code on a small platform layer in two looks, Classic
+and Enhanced. The [project README](../README.md) introduces the game.
 
-**[HOPPER.html](HOPPER.html)** gathers every document below, with the images embedded, into one page that reads offline
-in a browser.
+**[HOPPER.html](HOPPER.html)** gathers every document below, with the images and audio embedded, into one page that
+reads offline in a browser.
 
 ---
 
@@ -17,7 +16,7 @@ in a browser.
 | [player_guide.md](player_guide.md)         | How to play: menus, controls, the river and road, scoring    |
 | [original_release.md](original_release.md) | The PSS cassette cover and the PSS advert                    |
 | [graphics.md](graphics.md)                 | Oric screens and glyphs decoded from the tape; C64 captures  |
-| [sound.md](sound.md)                       | The AY effects and tunes, and how the SID plays them         |
+| [sound.md](sound.md)                       | The AY effects and tunes, the SID, and recordings to play    |
 | [architecture.md](architecture.md)         | Boot, memory map, the main loop, timing, both machines       |
 | [data_formats.md](data_formats.md)         | Every table: lanes, keys, tunes, text, hi-scores, the status |
 | [source_guide.md](source_guide.md)         | Repository layout, toolchain, build targets, conventions     |
@@ -40,12 +39,12 @@ in a browser.
 
 ## C64 Enhanced
 
-A planned second look for the C64 version, chosen on the home screen: same game, more of the C64's hardware.
+The C64 version's second look, chosen with F1 on the instructions page: the same game, more of the C64's hardware.
 
 | Document                                     | Covers                                                    |
 |:---------------------------------------------|:----------------------------------------------------------|
 | [enhanced.md](enhanced.md)                   | Overview, ground rules, the version switch, plan of work  |
-| [enhanced_graphics.md](enhanced_graphics.md) | Multicolour lanes, sprites, textures, markings, scrolling |
+| [enhanced_graphics.md](enhanced_graphics.md) | Lanes, sprites, markings, scrolling, font, instructions   |
 | [enhanced_sound.md](enhanced_sound.md)       | SID voicing of the tunes, effects, a title tune           |
 | [enhanced_platform.md](enhanced_platform.md) | Version flag, hooks, raster interrupt, memory, testing    |
 

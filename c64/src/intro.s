@@ -18,7 +18,7 @@
 
         .include "c64.inc"
 
-        .export UnpackPicture, ShowPicture
+        .export UnpackPicture, ShowPicture, Unpack
 
 PIC_BITMAP      = $E000                 ; bank 3 + $2000
 PIC_COLOURS     = $C000                 ; bank 3 + $0000
@@ -51,8 +51,7 @@ UnpackPicture:
 ; ShowPicture - show the picture until a key, fire, or 8 seconds, then put
 ; the VIC back in text mode on bank 2 with a blank screen (the caller's next
 ; SetRowMap makes Present redraw every row and its colours). Returns A = 1
-; if it ended on 1 or fire (start a game), PIC_F1 on F1 (flip the version),
-; else A = 0. Leaves interrupts
+; if it ended on 1 or fire (start a game), else A = 0. Leaves interrupts
 ; masked: the caller does cli.
 ;------------------------------------------------------------------------------
 ShowPicture:
@@ -109,17 +108,8 @@ ShowPicture:
         bne     @wait
         lda     #0                      ; timed out
         beq     @end
-@key:   lda     #$FE                    ; column 0: F1 is row 4
-        sta     CIA1_PRA
-        lda     CIA1_PRB
-        ldx     #$FF
-        stx     CIA1_PRA
-        and     #$10
-        bne     :+
-        lda     #PIC_F1
-        bne     @set
-:       jsr     StartPressed
-@set:   sta     zTmp2
+@key:   jsr     StartPressed
+        sta     zTmp2
 @up:    jsr     NextFrame               ; let go before the game reads keys
         jsr     Pressed
         bne     @up
@@ -127,6 +117,8 @@ ShowPicture:
 @end:   pha
         lda     #$0B                    ; blank, back to text on bank 2
         sta     VIC_CTRL1
+        lda     #0
+        sta     VIC_SPR_ENA             ; no sprites in text mode yet
         ldx     #0
         lda     #$20
 @clr:   sta     VIC_SCREEN,x

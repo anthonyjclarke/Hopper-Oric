@@ -29,13 +29,15 @@
         .import ReadKeysC64, FrameDelayC64, DelayXC64, T2Check, AyWriteC64
         .import InitGameC64, RomIrqOn, ReadRomKey, ReadMenuKey
         .import SoundMenuC64, CreditsIntroC64, HiscoreTableC64, AttractWait, RedefineKeys
+        .import SetFrogGfxC64, SplatDrawC64, CreditsEndC64, MenuKeyC64
         .import TitleTickC64, EraseFlyC64, StepFrogC64, CarryFrogC64
         .export CheckMenuKeys, ColdStart, InitGame, SoundMenu, CreditsIntro, DrawHiScoreTable, ServiceTimer
         .export PROG_START, PROG_END, key_rows, key_cols, key_bits
         .export keys_set2, key_name_left, key_name_right, key_name_up, key_name_down
-        .export ControlsWaitKey, AttractLoop, StartGame
+        .export ControlsWaitKey, AttractLoop, StartGame, ControlsMenu, ClearScreen
         .export StepFrog, LoseLife, L118A
-        .export GameOver, SilenceAll, HiscoreScreen, lane_speeds
+        .export GameOver, SilenceAll, lane_speeds, CreditsEnd, credits_text
+        .export DrawFrog, SetFrogGfxDir, row_steps_up, PickTune
 
         .segment "GAME"
 PROG_START:
@@ -1554,8 +1556,9 @@ frog_chars:
 ; SetFrogGfx - load the frog graphics for frog_dir into chars $3A-$3D.
 ;------------------------------------------------------------------------------
 SetFrogGfx:
-        ldx     #$1F                    ; 0F20
-        lda     frog_dir                ; 0F22
+        jmp     SetFrogGfxC64           ; 0F20  C64: Enhanced: the sprite frame (V2)
+        nop                             ; 0F23  C64: pad
+SetFrogGfxDir:
         cmp     #$01                    ; 0F24
         bne     L0F32                   ; 0F26
 L0F28:
@@ -4155,7 +4158,7 @@ L2112:
         sta     CHARSET+$3A*8,x         ; 2115
         dex                             ; 2118
         bpl     L2112                   ; 2119
-        jsr     DrawFrog                ; 211B
+        jsr     SplatDrawC64            ; 211B  C64: Enhanced: the splat sprite (V2)
         rts                             ; 211E
 
 DeathSoundInit:
@@ -4547,7 +4550,7 @@ L278F:
         inc     step_size               ; 27BB
         jmp     L278F                   ; 27BD
 L27C0:
-        jsr     CreditsEnd              ; 27C0
+        jsr     CreditsEndC64           ; 27C0  C64: the RUN/STOP and version lines first (Remix)
         rts                             ; 27C3
 
 CreditsHop:
@@ -4698,7 +4701,6 @@ L2956:
         nop                             ; 2968  C64: pad (was the counting loop)
         nop                             ; 2969  C64: pad (was the counting loop)
         nop                             ; 296A  C64: pad (was the counting loop)
-HiscoreScreen:                          ; C64: label only (F1 on the picture)
         jsr     ClearScreen             ; 296B
 BadTarget_296D := * - 1          ; 296D: target inside instruction above
         jsr     DrawTitleBar            ; 296E
@@ -4731,7 +4733,7 @@ L2987:
 ; CheckMenuKeys - 1 = start a game, 2 = show the instructions again.
 ;------------------------------------------------------------------------------
 CheckMenuKeys:
-        jsr     ReadRomKey              ; 299F  C64: draws the screen, then lda ROM_KEY
+        jsr     MenuKeyC64              ; 299F  C64: as ReadRomKey; 3 = redefine keys (Remix)
         beq     L29B9                   ; 29A2
         ldx     #$00                    ; 29A4
         stx     ROM_KEY                 ; 29A6

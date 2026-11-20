@@ -3,11 +3,12 @@
 The C64 Enhanced version is a second look for the Commodore 64 game. It plays exactly like the port: same lanes,
 timings, collisions and scoring, because it runs the same Oric code. What changes is how the game looks and sounds. It
 uses the C64 hardware the port leaves idle: sprites, multicolour characters, the raster interrupt beyond paper colours,
-the SID's filter and envelopes, and about 16 KB of free memory. The player chooses **Classic** or **Enhanced** on the
-home screen and can switch back and forth between games.
+the SID's filter and envelopes, and about 16 KB of free memory. The player chooses **Classic** or **Enhanced** with F1
+on the instructions page and can switch back and forth between games.
 
-**Status.** Built and checked in VICE: the version switch (V0), the multicolour lanes (V1) and the road markings (V6);
-their pictures are VICE captures. Everything else is planned, and its pictures are mock-ups drawn by
+**Status.** Built and checked in VICE: the version switch (V0), the attract screen (F1), the instructions page (F3), the
+multicolour lanes (V1), the sprite frog and fly (V2, V3), the smooth lanes (V4), the road markings (V6) and the Oric-style font (V7); their
+pictures are VICE captures. Everything else is planned, and its pictures are mock-ups drawn by
 `docs/tools/render_enhanced.py` from the real game screens ([How the Mock-Ups Are Made](#how-the-mock-ups-are-made)).
 Memory and cycle figures for the planned changes are estimates. This chapter is the overview and the version switch;
 [enhanced_graphics.md](enhanced_graphics.md), [enhanced_sound.md](enhanced_sound.md) and
@@ -48,15 +49,16 @@ colours, the frog keeps its drawing, and the screens keep their text where the g
 
 | ID | Change                        | Kind      | Tier     | Chapter                                      | Status  |
 |:---|:------------------------------|:----------|:---------|:---------------------------------------------|:--------|
-| V0 | Version switch on home screen | Front end | Polish   | [The Version Switch](#the-version-switch)    | Built   |
+| V0 | Version switch (F1)           | Front end | Polish   | [The Version Switch](#the-version-switch)    | Built   |
+| F3 | Enhanced instructions page    | Front end | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | V1 | Multicolour lane graphics     | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | V6 | Road markings as raster lines | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | V7 | Oric-style font               | Graphics  | Polish   | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | S1 | SID voicing of the AY tunes   | Sound     | Polish   | [enhanced_sound.md](enhanced_sound.md)       | Planned |
-| V2 | Sprite frog with hop arc      | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
-| V3 | Fly sprite                    | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| V2 | Sprite frog with hop arc      | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
+| V3 | Fly sprite                    | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | V5 | Water and grass texture       | Graphics  | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
-| F1 | Enhanced attract screen       | Front end | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Planned |
+| F1 | Enhanced attract screen       | Front end | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | S2 | SID sound effects             | Sound     | Showcase | [enhanced_sound.md](enhanced_sound.md)       | Planned |
 | V4 | Smooth-scrolling lanes        | Graphics  | Stretch  | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | F2 | Hi-scores saved to disk       | Front end | Stretch  | [enhanced_platform.md](enhanced_platform.md) | Planned |
@@ -76,71 +78,69 @@ can be dropped.
 
 ## The Version Switch
 
-The hi-score screen is the home screen. Every game starts there and comes back there, through the attract loop or after
-GAME OVER. In both versions it gains one line, on row 25, just above the game's own prompts:
+The switch lives on the credits and instructions page, the one screen that lists the keys. F1 there flips between
+Classic and Enhanced and shows the page again in the chosen look, so the player sees the difference before starting.
+F1 does nothing on any other screen.
+
+In Classic the page is the original: a frog hops round the screen laying the text down, then the version line appears
+on row 17. In Enhanced it is layout C, drawn at once: a framed title, CONTROLS and HOW TO PLAY panels with keycaps, and
+the 1, 3 and F1 buttons ([enhanced_graphics.md](enhanced_graphics.md#f3--enhanced-instructions-page)).
 
 ```text
    [F1] VERSION   CLASSIC   ENHANCED
 ```
 
-`[F1] VERSION` is cyan, the chosen version is in an inverse bar (black on white) and the other is blue. Row 25 is blank
-on this screen in the original, and the port's hi-score row map keeps it.
+Classic's version line, under the address once the frog has laid the page down: `[F1] VERSION` in cyan, the chosen
+version in an inverse bar (black on white), the other in blue. Enhanced's page has an `F1` keycap marked `CLASSIC`
+beside the 1 and 3 buttons.
 
-![VICE: the home screen at power-up, Enhanced chosen](images/screens/hiscores.png)
+![VICE: the Enhanced instructions page](images/screens/instructions.png)
 
-![VICE: after F1, Classic chosen](images/screens/version.png)
+![VICE: the Classic page after F1, Classic chosen](images/screens/credits-done.png)
 
-How the home screen will look once F1 (the attract screen) is built, as mock-ups:
+The hi-score screen is the original's in Classic; in Enhanced it is the attract screen (F1): a colour-cycled title, a
+scroller and a hopping frog ([enhanced_graphics.md](enhanced_graphics.md#f1--enhanced-attract-screen)).
 
-![Mock-up: the home screen in Classic](images/enhanced/home-classic.png)
+![VICE: the hi-score screen in Classic](images/screens/hiscores.png)
 
-![Mock-up: the home screen in Enhanced, with the colour-cycled title, hopping frog and scroller](images/enhanced/home-enhanced.png)
+![VICE: the attract screen in Enhanced](images/screens/enh-hiscores.png)
 
 ### Using It
 
-| Input                  | Does                                            |
-|:-----------------------|:------------------------------------------------|
-| F1                     | Flip between Classic and Enhanced               |
-| Joystick left or right | The same (home screen only)                     |
-| 1                      | Start a game in the chosen version (unchanged)  |
-| 2                      | Credits and instructions, in the chosen version |
+| Input | On the instructions page does                               |
+|:------|:------------------------------------------------------------|
+| F1    | Flip between Classic and Enhanced, and show the page again  |
+| 1     | Start a game in the chosen version (unchanged)              |
+| 2     | The page again                                              |
+| 3     | Redefine the keys ([remix.md](remix.md))                    |
 
-- The home screen redraws in the chosen style straight away. The player sees the difference before starting.
-- Each flip restarts the 15-second attract timer (`titleSteps`), so the screen doesn't move on to the start-up picture
-  while the player is choosing.
-- The choice applies to everything after it: the game, the credits, the sheet-start signs, GAME OVER and the attract
-  loop. It doesn't change in the middle of a game.
+- Classic's page takes F1 once the frog has laid it down (the version line is up); Enhanced's at once.
+- A flip shows the page again from the start, with the attract timer: Classic's frog walk, or Enhanced's page.
+- The choice applies to everything after it: the game, the sheet-start signs, GAME OVER and the attract loop. It
+  doesn't change in the middle of a game.
 - It lasts until power-off. RESTORE, the Oric's RESET, keeps it, as it keeps the hi-scores. With disk hi-scores (F2) it
   is saved with them.
 - A fresh power-up starts in Enhanced (`Start` sets it; an open question below).
-- F1 works on every screen before a game, not only the home screen: the menus, the credits, name entry and the
-  start-up picture. Off the home screen the font change shows the choice; F1 on the picture flips and goes straight to
-  the home screen, so the version line shows it. F1 at the power-up picture starts in Classic.
 
 ```mermaid
 stateDiagram-v2
     direction LR
+    Page: Instructions page
     Home: Home screen (hi-scores)
-    Home --> Home: F1 or joystick, flip and redraw
-    Credits --> Credits: F1, flip
+    Page --> Page: F1, flip and show again
+    Page --> Home: attract timer
+    Home --> Page: 2, or the attract loop
+    Page --> Game: 1
     Home --> Game: 1
-    Home --> Credits: 2, or attract timer
-    Credits --> Home
     Game --> Home: GAME OVER
 ```
 
 ### How It Works
 
-`TitleTickC64` already stands in for the game's `jsr CheckMenuKeys` in `TitleScroll` (patched at `$2938`), so the new
-key is read there, in platform code, without changing a game byte. One platform zero-page flag holds the choice. Every
-enhancement tests it, and the raster interrupt picks each row's character set and colours from it. Both looks stay in
-memory all the time, so a flip costs one redraw. The details are in
+One platform zero-page flag holds the choice and every enhancement tests it. F1 is taken out of the key buffer on every
+screen, so no game key wait sees it, and flips only while the instructions page is up; `RedefineKeys` refuses it as a
+movement key, and in a game it does nothing. The details are in
 [enhanced_platform.md](enhanced_platform.md#the-version-flag).
-
-F1 is free on every front-end screen: no game key wait uses it (the menus want digits and letters, and name entry
-ignores every code below `$20`). `Present` takes it out of `ROM_KEY` and flips, so the game never sees it.
-`RedefineKeys` refuses F1 as a movement key, as it refuses P and SPACE. In a game F1 does nothing: the version only
-changes between games.
 
 ---
 
@@ -162,7 +162,7 @@ Each step ends with Classic smoke captures that match today's, and Enhanced capt
 | Name on the title screen and disk     | HOPPER+ or Hopper Enhanced                |
 | Version at power-up                   | Enhanced                                  |
 | Is a title tune "subtle" (S3)?        | Arranged from the sheet tune, or left out |
-| Version switch in the sound menu too? | No: home screen only                      |
+| Version switch on other screens?      | No: the instructions page only            |
 | Switch during a game (paused)?        | No: between games only                    |
 
 ---

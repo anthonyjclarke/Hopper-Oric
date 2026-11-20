@@ -19,13 +19,14 @@
         .include "c64.inc"
 
         .import Present, ParseNextRow, ScanRomKey, ServiceTimer, CheckMenuKeys
-        .import rowPaper, rowCset, rowMc1, rowMc2, rowCtl2
+        .import rowPaper, rowCset, rowMc1, rowMc2, rowCtl2, rowIrqBg, SprTick, attractOn
+        .export catchUp, MarkRow
         .export InitTiming, ReadClock, WaitCycles, DelayXC64, FrameDelayC64, T2Check, Idle, IdleParse
         .export AttractWait
 .ifdef AUTOTEST
         .import AutoTestTick
 .endif
-        .export IrqHandler, NmiEntry
+        .export IrqHandler, IrqDefault, NmiEntry
 
         .segment "CODE"
 
@@ -43,11 +44,6 @@ InitTiming:
         bcc     :+
         inx
 :       stx     zIsPAL
-        lda     #EV_DELAY_NTSC
-        cpx     #0
-        beq     :+
-        lda     #EV_DELAY_PAL
-:       sta     evDelay
 
         ; CIA2: timer A counts cycles, timer B counts A's underflows; both
         ; free-running from $FFFF. ReadClock reads 24 bits of the pair.
@@ -153,6 +149,8 @@ T2Check:
 ;------------------------------------------------------------------------------
 DelayXC64:
         pha
+        lda     #1                      ; DelayX keeps the Oric's pace: debt
+        sta     catchUp                 ; carried, Presents thinned if need be
         lda     #HOOK_NONE
         sta     zWaitHook
         lda     #<DELAYX_UNIT
@@ -169,6 +167,8 @@ DelayXC64:
 ; ServiceTimer meanwhile, as FrameDelay did once per count.
 ;------------------------------------------------------------------------------
 FrameDelayC64:
+        lda     #0                      ; play: a Present every frame, at the
+        sta     catchUp                 ; cost of some of the Oric's pace
         ldx     game_delay
         lda     #<FRAMEDELAY_UNIT
         ldy     #>FRAMEDELAY_UNIT
@@ -256,6 +256,8 @@ MulUnit:
 ;------------------------------------------------------------------------------
 WaitCycles:
         jsr     ReadClock
+        lda     #0
+        sta     presented
         ; zWait -= zDebt; if that goes negative, the wait is used up by debt
         sec
         lda     zWait
@@ -308,8 +310,9 @@ WaitCycles:
         lda     zNow+2
         sbc     zDeadline+2
         sta     zTmp2
-        bpl     @done
-        ; time left: draw if a frame has passed, else parse a row if there is room
+        bmi     :+
+        jmp     @done
+:       ; time left: draw if a frame has passed, else parse a row if there is room
         sec
         lda     zNow
         sbc     zLastPresent
@@ -320,12 +323,22 @@ WaitCycles:
         lda     zNow+2
         sbc     zLastPresent+2
         bne     @present                ; >= 65536 cycles
-        cpy     #>PRESENT_GAP
+        lda     lagging                 ; DelayX: Presents overrunning its waits (the
+        beq     :+                      ; death flash: DelayX 6, 7.7k cycles,
+        cpy     #>PRESENT_GAP_BEHIND    ; against a Present's ~18k): every other
+        bcc     @noPresent              ; frame, so the game keeps the Oric's pace
+        bne     @present
+        cpx     #<PRESENT_GAP_BEHIND
+        bcc     @noPresent
+        bcs     @present
+:       cpy     #>PRESENT_GAP
         bcc     @noPresent
         bne     @present
         cpx     #<PRESENT_GAP
         bcc     @noPresent
 @present:
+        lda     #1
+        sta     presented
         lda     zNow
         sta     zLastPresent
         lda     zNow+1
@@ -374,8 +387,35 @@ WaitCycles:
         sta     zWaitHook
         jmp     @loop
 
-@done:  ; overrun = now - deadline (zTmp0-2) -> debt, capped
+@done:  ; overrun = now - deadline (zTmp0-2) -> debt, capped. In DelayX
+        ; (catchUp) it is added to any debt this wait could not pay (zDebt),
+        ; and a Present that overran makes the next ones every third frame
+        lda     catchUp
+        bne     :+
+        sta     lagging
+        sta     zDebt
+        sta     zDebt+1
+        beq     @add
+:       lda     presented               ; a Present in this wait: lagging if
+        beq     :+                      ; it overran by LAG_OVERRUN or more
+        sec
         lda     zTmp2
+        bne     @lag
+        lda     zTmp1
+        cmp     #>LAG_OVERRUN
+@lag:   lda     #0
+        rol     a                       ; C = the overrun was big
+        sta     lagging
+:
+@add:   clc
+        lda     zTmp0
+        adc     zDebt
+        sta     zTmp0
+        lda     zTmp1
+        adc     zDebt+1
+        sta     zTmp1
+        lda     zTmp2
+        adc     #0
         bne     @cap
         lda     zTmp1
         cmp     #>MAX_DEBT
@@ -432,70 +472,103 @@ IdleParse:
 ; rowPaper / rowCset; the bottom-border IRQ sets row 0 and does the
 ; per-frame jobs.
 ;------------------------------------------------------------------------------
-EV_DELAY_PAL    = 1                     ; 4 cycles (was 3 before V4 loaded
-EV_DELAY_NTSC   = 1                     ; $D016 ahead of the delay)
 
-IrqHandler:
-        pha
-        txa
-        pha
-        tya
-        pha
-        ldx     evIdx                   ; 0: bottom border, else the row
-        beq     @frame
+; IRQ_PAD: nops before the row IRQ's three VIC stores, for experiments; 0.
+; Each one moves the stores 2 cycles later, which the late end can't spare.
+.ifndef IRQ_PAD
+IRQ_PAD = 0
+.endif
+
+; The next row's three VIC values into registers, so the stores come back to
+; back, 4 cycles apart, in the border between the row above's last line and
+; this row's first (a badline, which stalls the CPU from its start): Y =
+; $D018, A = $D021, X = $D016. X = the row on entry.
+;
+; Timing, measured in VICE (PAL, the monitor's line/cycle at each store):
+; without sprites the first store starts at cycle 49-55 of the line (the
+; IRQ's jitter) and the third by cycle 0 of the next. One cycle earlier and
+; the first store lands before the row above's last line ends (a changed
+; paper shows in its last pixels). A store must start by cycle 8 of the
+; next line, or the badline holds it to that line's end and the row's first
+; line keeps the row above's value. The frog's sprite DMA stops the CPU at
+; about cycles 56-62; when it catches the first store, all three come after
+; it and the third starts at cycle 4-7. Two things keep that in time: the
+; registers are saved in zero page, not pushed (3 cycles; it was cycle 9,
+; now and then), and in Enhanced play the third store is a register that
+; doesn't change at that boundary, picked per row (IrqArmPlay): IrqHandler
+; stores $D016 last (menus, Classic, and rows where the other two change),
+; IrqBgLast the paper (river), IrqCsLast the character set (road).
+.macro ROW_LOADS
         ldy     rowCset,x
         lda     D018Table,y
         tay
-        lda     rowPaper,x
-        sta     @paper+1
-        lda     rowCtl2,x               ; multicolour and V4's fine scroll
-        ldx     evDelay
-@dly:   dex
-        bne     @dly
-        sta     VIC_CTRL2               ; in the right border of the row
-@paper: lda     #0                      ; above's last line, 4 cycles before
-        sta     VIC_BG0                 ; $D021 (2 later than with the old
-        sty     VIC_MEMSETUP            ; event lists): the row's first line
-        ldx     evIdx                   ; is a badline, too late for $D016
-        lda     zMcPlay                 ; Enhanced play: multicolour shade
-        beq     :+                      ; and highlight (only multicolour
-        lda     rowMc1,x                ; cells use them; skipped otherwise)
+        lda     rowCtl2,x
+        sta     zIrqCtl
+        lda     rowIrqBg,x
+        ldx     zIrqCtl
+        .repeat IRQ_PAD
+        nop
+        .endrepeat
+.endmacro
+
+IrqToFrame:
+        jmp     IrqFrame                ; (out of a branch's reach)
+IrqHandler:
+        sta     zIrqA                   ; 3 cycles fewer than pushing them
+        stx     zIrqX                   ; (a: keeps 1: 4 fewer puts the first
+        sty     a:zIrqY                 ; store a cycle early, see ROW_LOADS)
+        ldx     evIdx                   ; 0: bottom border, else the row
+        beq     IrqToFrame
+        ROW_LOADS
+        sty     VIC_MEMSETUP            ; the character set first: a late one
+        sta     VIC_BG0                 ; draws a whole line of the wrong glyphs
+        stx     VIC_CTRL2
+IrqMark:
+IrqLine = * + 1
+        ldx     #0                      ; V6: a road marking (FineRow) makes
+        beq     IrqPlain                ; the row's first line grey; its paper
+IrqPaper = * + 1
+        ldy     #0                      ; goes back as the second line starts.
+:       cpx     VIC_RASTER              ; The loop is running before the
+        bcs     :-                      ; badline stall, so after it (and the
+        sty     VIC_BG0                 ; frog's sprite DMA) it leaves on the
+                                        ; line change, not on code timing.
+                                        ; Both immediates are set by IrqArm.
+IrqPlain:
+        ldx     evIdx
+        lda     zMcPlay                 ; Enhanced play
+        beq     @next
+@mc:    lda     rowMc1,x                ; multicolour shade and highlight
+        sta     VIC_BG1                 ; (only multicolour cells use them).
+        lda     rowMc2,x                ; These land after the badline stall,
+        sta     VIC_BG2                 ; too late for the row's first line,
+        lda     rowCset,x               ; so a row without multicolour cells
+        cmp     #CS_MC                  ; (the water between river lanes, the
+        beq     @next                   ; verges) loads the next row's now
+        lda     rowMc1+1,x
         sta     VIC_BG1
-        lda     rowMc2,x
+        lda     rowMc2+1,x
         sta     VIC_BG2
-        lda     rowCset,x               ; V6: a road marking at the top of
-        cmp     #CS_MC                  ; this lane row (not over the
-        bne     :+                      ; sheet-start signs): one raster
-        lda     MarkRow,x               ; line of grey
-        beq     :+
-        ldy     #MARK_LEAD              ; into the right border first
-@lead:  dey
-        bne     @lead
-        lda     #MARK_COLOUR
-        sta     VIC_BG0
-        ldy     #MARK_WAIT              ; 9 + 5 * 11 = 64 cycles: the line
-@mark:  dey                             ; (63 PAL, 65 NTSC). The first line
-        bne     @mark                   ; of a row is a badline, so both
-        lda     rowPaper,x              ; stores land in the border
-        sta     VIC_BG0
-:       inx
+@next:  inx
         cpx     #C64_ROWS
         bcc     :+
         ldx     #0
 :       stx     evIdx
+IrqArm: ldy     #0                      ; Enhanced play: the next row's
+        bit     zMcPlay                 ; marking and store order
+        bpl     :+
+        jsr     IrqArmPlay
+:       sty     IrqLine
         lda     RowLine,x
-@setLine:
         sta     VIC_RASTER
         lda     #$01
         sta     VIC_IRQ_FLAG
-        pla
-        tay
-        pla
-        tax
-        pla
+        lda     zIrqA
+        ldx     zIrqX
+        ldy     zIrqY
         rti
 
-@frame: ; --- bottom border: row 0's settings, frame jobs, then row 1's IRQ
+IrqFrame: ; --- bottom border: row 0's settings, frame jobs, then row 1's IRQ
         lda     rowPaper
         sta     VIC_BG0
         ldy     rowCset
@@ -507,6 +580,11 @@ IrqHandler:
         sta     VIC_BG2
         lda     rowCtl2                 ; Enhanced play: multicolour text mode
         sta     VIC_CTRL2               ; (cells with colour RAM below 8 stay hires)
+        lda     zMcPlay                 ; and the sprites (V2, V3; F1's frog)
+        ora     attractOn
+        beq     :+
+        jsr     SprTick
+:
         inc     zTick
         dec     blinkCount
         bne     :+
@@ -523,10 +601,9 @@ IrqHandler:
 .ifdef AUTOTEST
         jsr     AutoTestTick
 .endif
-        lda     #1
-        sta     evIdx
-        lda     RowLine+1
-        bne     @setLine                ; always
+        ldx     #1
+        stx     evIdx
+        bne     IrqArm                  ; always
 
 ; The ROM cursor: while the ROM interrupt is on and ROM_CURPTR points into
 ; the screen, invert the character there on each blink phase.
@@ -566,9 +643,6 @@ D018Table:
 
 ; Enhanced play (V6): the C64 rows that start with a road marking, where the
 ; port hides Oric rows 19 and 22 (MapGame): above Oric rows 20 and 23.
-MARK_COLOUR     = COL_GREY
-MARK_WAIT       = 11
-MARK_LEAD       = 5             ; ~25 cycles: the grey store lands in the border
 MarkRow:
         .repeat C64_ROWS, r
         .byte   (r = 18) .or (r = 20)
@@ -582,8 +656,105 @@ RowLine:
         .byte   FIRST_TEXT_LINE + (r+1)*8 - 1
         .endrepeat
 
+        .segment "HIDATA"
+
+; IrqDefault - from SetRowMap, after it sets zMcPlay: the IRQ vector back to
+; IrqHandler, whose stores suit every screen (out of play nothing else sets
+; it). IrqBgLast and IrqCsLast do any row and the frame IRQ meanwhile.
+IrqDefault:
+        php
+        sei
+        lda     #<IrqHandler
+        sta     VEC_IRQ
+        lda     #>IrqHandler
+        sta     VEC_IRQ+1
+        plp
+        rts
+
+; IrqArmPlay - IrqArm in Enhanced play, X = the next row (0: the frame IRQ).
+; Returns Y = the raster line whose start ends a road marking (the row's
+; badline + 1) and sets IrqPaper, or Y = 0 for no marking. Points the IRQ
+; vector at the store order for that row (see ROW_LOADS). Preserves X.
+IrqArmPlay:
+        lda     rowIrqBg,x              ; V6: a row that starts grey
+        cmp     #MARK_COLOUR
+        bne     :+
+        lda     rowPaper,x
+        sta     IrqPaper
+        sta     IrqPaperC
+        ldy     RowLine,x
+        iny
+:       sty     IrqLineC
+        lda     rowCset,x               ; the store that may come late is one
+        cmp     rowCset-1,x             ; whose register keeps its value
+        beq     @csLast                 ; (row 0, the frame: any order works)
+        lda     rowIrqBg,x
+        cmp     rowPaper-1,x            ; (the paper after a marking's line)
+        beq     @bgLast
+        lda     #<IrqHandler
+        sta     VEC_IRQ
+        lda     #>IrqHandler
+        sta     VEC_IRQ+1
+        rts
+@csLast:
+        lda     #<IrqCsLast
+        sta     VEC_IRQ
+        lda     #>IrqCsLast
+        sta     VEC_IRQ+1
+        rts
+@bgLast:
+        lda     #<IrqBgLast
+        sta     VEC_IRQ
+        lda     #>IrqBgLast
+        sta     VEC_IRQ+1
+        rts
+
+; The row IRQ with the paper last (the water between river lanes: the
+; character set and the fine scroll change, the paper doesn't)
+IrqBgLast:
+        sta     zIrqA                   ; 3 cycles fewer than pushing them
+        stx     zIrqX                   ; (a: keeps 1: 4 fewer puts the first
+        sty     a:zIrqY                 ; store a cycle early, see ROW_LOADS)
+        ldx     evIdx
+        bne     :+
+        jmp     IrqFrame
+:       ROW_LOADS
+        sty     VIC_MEMSETUP
+        stx     VIC_CTRL2
+        sta     VIC_BG0
+        jmp     IrqMark
+
+; The row IRQ with the character set last (the road: the paper of a marking
+; and the fine scroll change, the character set doesn't). $D016 goes first:
+; early, it moves only the blank right margin of the line above. Its own copy
+; of the marking loop: a jmp to IrqMark first would let the badline catch it
+; before the loop is running, and the paper would go back late.
+IrqCsLast:
+        sta     zIrqA                   ; 3 cycles fewer than pushing them
+        stx     zIrqX                   ; (a: keeps 1: 4 fewer puts the first
+        sty     a:zIrqY                 ; store a cycle early, see ROW_LOADS)
+        ldx     evIdx
+        bne     :+
+        jmp     IrqFrame
+:       ROW_LOADS
+        stx     VIC_CTRL2
+        sta     VIC_BG0
+        sty     VIC_MEMSETUP
+IrqLineC = * + 1
+        ldx     #0
+        beq     IrqPlainC
+IrqPaperC = * + 1
+        ldy     #0
+:       cpx     VIC_RASTER
+        bcs     :-
+        sty     VIC_BG0
+IrqPlainC:
+        jmp     IrqPlain
+
         .segment "BSS"
-evDelay:        .res 1
 evIdx:         .res 1
 blinkCount:    .res 1
+presented:     .res 1          ; WaitCycles has called Present
+lagging:       .res 1          ; a Present overran its DelayX wait: every third frame
+catchUp:       .res 1          ; the wait is DelayX's (1), not FrameDelay's (0)
 attractCount:   .res 1

@@ -16,10 +16,11 @@ The tape autoruns. Two menus come first, once only: they come back only after th
 
 Then the attract cycle: a frog hops round the screen leaving the credits and instructions behind it, they stay for about
 18 seconds, and the hi-score table follows with its title scrolling. **1** starts a game and **2** shows the
-instructions again, on either screen. On the Oric the hi-score screen stays until a key; the C64 version moves on after
-about 15 seconds to its start-up picture, then the credits again ([porting.md](porting.md#decisions)). On the C64
-hi-score screen, **F1** or the joystick left or right also picks the **Classic** or **Enhanced** look; F1 works on
-every screen before a game ([enhanced.md](enhanced.md#the-version-switch)).
+instructions again, on either screen; on the C64, **3** redefines the keys (the instructions say so). On the Oric the
+hi-score screen stays until a key; the C64 version moves on after about 15 seconds to its start-up picture, then the
+credits again ([porting.md](porting.md#decisions)). On the C64 instructions page, **F1** picks the **Classic** or
+**Enhanced** look and shows the page again in it; it does nothing on other screens
+([enhanced.md](enhanced.md#the-version-switch)).
 
 ---
 
@@ -33,13 +34,14 @@ every screen before a game ([enhanced.md](enhanced.md#the-version-switch)).
 | C64     | 2      | Redefine: you press the four keys |       |    |      |       |
 
 On the C64, joystick port 2 works with either choice, and **Redefine keys** asks for left, right, up and down in turn
-under the menu. It refuses P (pause), SPACE, RETURN, DEL, `:` `;` `=` (they draw the frog in the instructions) and a key
-already chosen, and waits for every key to be released before each prompt.
+under the menu; a key it can't take (P, SPACE, a key already chosen and a few more) shows **CAN'T USE** in red and it
+waits for another ([remix.md](remix.md)).
 
 A held key moves the frog once: `GetMove` ignores a direction that is still held from the last hop. **P** pauses and
 silences the sound; P again carries on. In play, the RESET button (RESTORE) goes back to the sound menu, keeping the
 hi-scores. On the C64, **RUN/STOP** ends the game at once: GAME OVER, the hi-score check, then the hi-score table
-([remix.md](remix.md)).
+([remix.md](remix.md)); the C64 credits list it with the other keys. **F1** on the instructions page switches between
+Classic and Enhanced.
 
 ---
 

@@ -90,7 +90,8 @@ ReadKeysC64:
 ; set 2 orders its keys up, down, left, right, with key_bits to match, so
 ; the bits are rewritten here in set 1's order, the order the prompts use.
 ; Refused: keys with no character, P, SPACE, RETURN, DEL, the frog's
-; characters (: ; =) and a key already chosen.
+; characters (: ; =) and a key already chosen. A refused key shows
+; CAN'T USE in red after the prompt (RedefNote) until a key is accepted.
 ;------------------------------------------------------------------------------
 REDEF_ROW       = SCREEN + 24*40 + 7        ; ink attribute, then the prompts
 
@@ -134,14 +135,14 @@ RedefineKeys:
         and     #$7F
         ldx     #RefusedEnd-Refused-1
 @ref:   cmp     Refused,x
-        beq     @key
+        beq     @no
         dex
         bpl     @ref
         ldx     redefIdx                ; not one already chosen
         beq     @find
 @dup:   dex
         cmp     redefName,x
-        beq     @key
+        beq     @no
         cpx     #0
         bne     @dup
 @find:  ldx     #63                     ; its place in the matrix
@@ -150,7 +151,18 @@ RedefineKeys:
         dex
         bpl     @look
         bmi     @key
-@found: ldy     redefIdx
+@no:    ldx     #NOTE_SHOW              ; refused: say so, and wait for another
+        jsr     RedefNote
+        jmp     @key
+@found: pha
+        txa
+        pha
+        ldx     #NOTE_CLEAR             ; a refusal's note goes
+        jsr     RedefNote
+        pla
+        tax
+        pla
+        ldy     redefIdx
         sta     redefName,y
         pha
         lda     PromptRowLo,y           ; (the drawing may have used zPtr)
@@ -195,14 +207,14 @@ RedefineKeys:
 
 ;------------------------------------------------------------------------------
 ; WaitNoKeys - for RedefineKeys: wait until no key has been down for
-; RELEASE_FRAMES frames in a row, then forget any key ScanRomKey reported
+; RELEASE_FRAMES frames (by zTick), then forget any key ScanRomKey reported
 ; meanwhile, so a held or bouncing key is not taken for the next prompt.
+; (It counted passes of its loop, each an IdleParse of about 4 frames: 20
+; frames, and a key typed in them was lost.)
 ;------------------------------------------------------------------------------
 RELEASE_FRAMES  = 5
 
 WaitNoKeys:
-        lda     #RELEASE_FRAMES
-        sta     redefQuiet
         lda     zTick
         sta     redefTick
 @loop:  jsr     IdleParse
@@ -214,11 +226,10 @@ WaitNoKeys:
         cmp     #$FF
         bne     WaitNoKeys              ; a key is down: start counting again
         lda     zTick
-        cmp     redefTick
-        beq     @loop
-        sta     redefTick
-        dec     redefQuiet
-        bne     @loop
+        sec
+        sbc     redefTick
+        cmp     #RELEASE_FRAMES
+        bcc     @loop
         lda     #0
         sta     ROM_KEY
         sta     zLastKey                ; the next press is new
@@ -272,8 +283,9 @@ ScanRomKey:
         cmp     zLastKey
         beq     @r
         sta     zLastKey
-        beq     @r                      ; released
-        ora     #$80
+        cmp     #0                      ; released: nothing new (sta sets no
+        beq     @r                      ; flags; without this a release came
+        ora     #$80                    ; through as key 0)
         sta     ROM_KEY
 @r:     rts
 
@@ -318,9 +330,36 @@ Refused:        .byte   "P", " ", $0D, $7F, ":", ";", "=", KEY_F1
 RefusedEnd:
 RowBit:         .byte   $01, $02, $04, $08, $10, $20, $40, $80
 
+        .segment "HIDATA"
+
+; RedefNote - for RedefineKeys: X = NOTE_SHOW puts CAN'T USE (red ink) after
+; the current prompt, X = NOTE_CLEAR blanks it.
+NOTE_COL        = PROMPT_KEYCOL + 2
+NOTE_LEN        = 10
+NOTE_SHOW       = 0
+NOTE_CLEAR      = NOTE_LEN
+
+RedefNote:
+        ldy     redefIdx
+        lda     PromptRowLo,y
+        sta     zPtr
+        lda     PromptRowHi,y
+        sta     zPtr+1
+        ldy     #NOTE_COL
+:       lda     NoteText,x
+        sta     (zPtr),y
+        inx
+        iny
+        cpy     #NOTE_COL + NOTE_LEN
+        bne     :-
+        rts
+
+NoteText:
+        .byte   $01, "CAN'T USE"        ; Oric ink red
+        .byte   "          "
+
         .segment "BSS"
 redefIdx:       .res 1
-redefQuiet:     .res 1
 redefTick:      .res 1
 redefName:      .res 4
 scanIdle:       .res 1

@@ -23,19 +23,17 @@ changed: `make verify` keeps it byte-identical to the tape.
 | 6  | Attract loop: hi-scores, picture, credits        | Presentation   | `TitleTickC64`                |
 | 7  | No hang when the frog reaches a home with no fly | Fix (hardware) | `EraseFlyC64`                 |
 | 8  | Hardware stand-ins: screen, sound, keys, RESET   | Port           | [porting.md](porting.md)      |
-| 9  | Version switch (F1), shown on the hi-scores      | Presentation   | `VersionKeys`, `TakeF1`       |
-| 10 | RUN/STOP ends a game                             | Controls       | `QuitGameC64`                 |
+| 9  | Version switch (F1) on the instructions page     | Presentation   | `TakeF1`                      |
+| 10 | RUN/STOP ends a game, listed in the instructions | Controls       | `QuitGameC64`                 |
+| 11 | 3 redefines the keys from the attract loop       | Controls       | `MenuKeyC64`                  |
 
 ---
 
 ## 1. The Frog Can Hop to the Outermost Columns
 
-**Original.** The playfield is columns 2–39 (columns 0–1 hold each row's colour attributes). The frog is two columns
-wide and hops two columns at a time. The game stores its column in `frog_col` as one less than its screen column (it
-starts at column 20 with `frog_col` 19), but `CheckFrogBounds` tests `frog_col` as if it were the screen column, killing
-the frog at `frog_col` 1 or `$25`: on reaching column 2, or on covering column 39. So from the start the frog gets eight
-hops each way; the ninth looks as if it lands on open grass, yet it dies. On the river, a log or turtle carrying the frog
-kills it one column before the edge for the same reason. See quirk 13 in [quirks.md](quirks.md).
+**Original.** The playfield is columns 2–39, but an off-by-one in `CheckFrogBounds` kills the frog on reaching column 2
+or covering column 39, so the visible grass at either edge can't be stood on, and a carried frog dies one column early
+(quirk 13 in [quirks.md](quirks.md)).
 
 **C64 Remix.** The frog may stand anywhere in columns 2–39:
 
@@ -48,7 +46,7 @@ kills it one column before the edge for the same reason. See quirk 13 in [quirks
   column further out, as the original rule would now do, it would overwrite the row's paper attribute in column 1 (or
   the next row's column 0) and turn two rows the wrong colour during the death flash.
 
-**Why.** The original limit looks like an off-by-one: the visible grass at columns 2–3 and 38–39 could never be stood on.
+**Why.** The visible grass at columns 2–3 and 38–39 could never be stood on.
 
 ---
 
@@ -59,8 +57,9 @@ down).
 
 **C64 Remix.** Choice 2 is **Redefine keys** (`RedefineKeys`, `input.s`, in place of `cmp #'2' / bne` at `$2F91`). It
 asks for left, right, up and down in turn under the menu, and refuses P (pause), SPACE, RETURN, DEL, `:` `;` `=` (the
-frog's characters in the credits text), F1 (the version switch) and a key already chosen. Before each prompt it waits
-until no key has been down for 5 frames (`WaitNoKeys`), so the key that chose 2, or a bounce, isn't taken as LEFT. It
+frog's characters in the credits text), F1 (the version switch) and a key already chosen, showing CAN'T USE in red after
+the prompt (`RedefNote`) and waiting for another key. Before each prompt it waits until no key has been down for 5
+frames (`WaitNoKeys`), so the key that chose 2, or a bounce, isn't taken as LEFT. It
 writes each key's column select, row mask and key bit into the Oric's second key table (`keys_set2`), which the menu's
 own code then copies into use as before, and puts the four key names into the instructions text.
 
@@ -103,18 +102,20 @@ fire. It is built by `tools/make_intro.py` (`make c64-intro`) and shown by `Show
 
 **C64 Remix.** After about 15 seconds the hi-score screen moves on to the picture, then the credits and instructions,
 then the hi-scores again (`TitleTickC64`, in place of `jsr CheckMenuKeys` at `$2938`). 1 or fire on the picture starts a
-game. The sound and controls menus still appear only at power-up and on RESTORE, so keys are chosen once.
+game. The sound and controls menus still appear only at power-up and on RESTORE; 3 redefines the keys from the
+attract loop (change 11).
 
 ---
 
 ## 7. No Hang When the Frog Reaches a Home With No Fly
 
-**Original.** `CheckFlyEaten` calls `EraseFly` for every frog that reaches the home row, fly or not. With no fly showing,
-`fly_ptr` is `$0000`, so the Oric wrote two harmless spaces to zero page `$00`/`$01` (quirk 12).
+**Original.** With no fly showing, erasing the fly writes two harmless spaces to zero page `$00`/`$01` (quirk 12 in
+[quirks.md](quirks.md)).
 
-**C64 Remix.** On the C64, `$00`/`$01` is the 6510's port: those spaces switched BASIC, KERNAL and I/O in and the
-machine hung. `EraseFlyC64` writes them where the Oric's `tmp0` and `key_state` now live instead. Play is unchanged; this
-is a fix forced by the hardware, not a design change.
+**C64 Remix.** On the C64, `$00`/`$01` is the 6510's port: `$20` in its direction register makes the banking lines
+inputs, which float high, so BASIC, KERNAL and I/O switched in and the machine hung in the KERNAL's interrupt code.
+`EraseFlyC64` writes them where the Oric's `tmp0` and `key_state` now live instead. Play is unchanged; this is a fix
+forced by the hardware, not a design change.
 
 ---
 
@@ -127,14 +128,15 @@ fast). Its **Known Differences** table lists what shows.
 
 ---
 
-## 9. Version Line on the Hi-Score Screen
+## 9. Version Switch on the Instructions Page
 
-**Original.** Row 25 of the hi-score screen is blank.
+**Original.** One version; row 17 of the credits, between the address and the instructions, is blank.
 
-**C64.** It shows `[F1] VERSION  CLASSIC  ENHANCED`, and F1 or the joystick left or right picks Classic (the port as
-this chapter describes it) or the C64 Enhanced look (`VersionKeys` and `DrawVersionLine`, from `TitleTickC64`). F1 also
-flips on every other screen before a game (`TakeF1`, from `Present`). Play is the same in both. Everything about the
-Enhanced version is in [enhanced.md](enhanced.md).
+**C64.** F1 on the credits and instructions page picks Classic (the port as this chapter describes it) or the C64
+Enhanced look, and shows the page again in it; on other screens F1 does nothing. Classic's page shows the choice on row
+17 once the frog has laid the page down (`DrawVersionLine`, from `CreditsEndC64`, patched over the `jsr CreditsEnd` at
+`$27C0`). The page lists the keys and redefines them (change 11), so controls and look are chosen in one place. Play is
+the same in both; the switch is described in [enhanced.md](enhanced.md#the-version-switch).
 
 ---
 
@@ -145,9 +147,25 @@ Enhanced version is in [enhanced.md](enhanced.md).
 **C64.** RUN/STOP in a game, or while it is paused, ends it at once: GAME OVER, the hi-score check (the score so far
 counts), then the hi-score table. `ReadKeysC64` checks the key on every key read in a game and jumps to
 `QuitGameC64`, which resets the stack, silences the sound and enters the game's own `GameOver`. RESTORE still works as
-the RESET button.
+the RESET button. The credits list it with the other keys, `RUN/STOP - QUIT GAME` above `P - PAUSE` (row 19, drawn by
+`CreditsEndC64`).
 
 **Why.** A player who wants another go, or the other version, had to play to the end or go back through both menus.
+
+---
+
+## 11. 3 Redefines the Keys from the Attract Loop
+
+**Original.** The controls menu comes once, after the sound menu; only the RESET button brings it back.
+
+**C64 Remix.** **3** on any screen of the attract loop (picture, credits, hi-scores) goes straight to Redefine keys.
+`MenuKeyC64` replaces the `jsr ReadRomKey` in `CheckMenuKeys` at `$299F`: on 3 it resets the stack, silences the sound,
+clears the screen, puts 2 in `ROM_KEY` and calls `ControlsMenu`, so the menu's own choice 2 runs `RedefineKeys`; then
+the attract loop starts again with the credits, which show the new keys. Any other key returns as `ReadRomKey` did.
+`CreditsEndC64` adds `PRESS [3] FOR NEW KEYS` in white on row 27, under the blinking `PRESS [1] TO START`; its ink
+attribute replaces the row's blink attribute at column 14, so the line holds still.
+
+**Why.** Trying other keys meant RESTORE and both menus again; the instructions page is where the keys are listed.
 
 ---
 

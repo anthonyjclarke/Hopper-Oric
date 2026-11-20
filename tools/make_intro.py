@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
-"""Make the C64 start-up picture from the original PSS cassette inlay, as a multicolour bitmap.
+"""Make the C64 start-up picture, a multicolour bitmap, from its master image c64/art/intro.png.
 
-  python3 tools/make_intro.py
+  python3 tools/make_intro.py                  pack c64/art/intro.png into c64/src/intro.rle
+  python3 tools/make_intro.py --from-scans     redraw the master from the cassette scans (overwrites your edits)
+
+The master is the file to edit by hand: 320x200, indexed with the 16 C64 colours (Pepto's palette), each multicolour
+pixel two pixels wide. Draw on it in any paint program that keeps the palette (Aseprite, GIMP in indexed mode,
+Pixelorama); colours off the palette are snapped to the nearest. The C64 limit applies per 4x8 multicolour cell (8x8
+in the master): black plus at most three other colours. Packing stops and lists the cells that break it (with their
+colours), or with --fix keeps each such cell's three most used colours and snaps the rest. A pair whose two pixels
+differ takes the left one.
+
+The scans route, which made the master:
 
 Laid out for the C64's multicolour resolution (160x200, double-wide pixels) in C64 colour numbers: on black with
 the inlay's blue grid, the cover painting (docs/images/original/cover.png) on the left in its white frame; on
@@ -14,8 +24,10 @@ Writes c64/src/intro.rle (bitmap, screen and colour RAM, each run-length packed;
 docs/images/graphics/intro-design.png (a preview at double width). Needs Pillow. Same method and packing as the
 Light Cycle port's tools/make_intro.py.
 """
+import argparse
 import itertools
 import os
+import sys
 
 from PIL import Image, ImageEnhance
 
@@ -25,6 +37,7 @@ COVER = os.path.join(ROOT, 'docs', 'images', 'original', 'cover.png')
 INLAY = os.path.join(ROOT, 'docs', 'images', 'original', 'inlay.png')
 PREVIEW = os.path.join(ROOT, 'docs', 'images', 'graphics', 'intro-design.png')
 OUT = os.path.join(ROOT, 'c64', 'src', 'intro.rle')
+MASTER = os.path.join(ROOT, 'c64', 'art', 'intro.png')
 
 # Pepto's measured C64 palette.
 PALETTE = [(0, 0, 0), (255, 255, 255), (104, 55, 43), (112, 164, 178), (111, 61, 134), (88, 141, 67), (53, 40, 121),
@@ -220,8 +233,75 @@ def rle(data):
     return out + b'\xfe\x00'
 
 
+def save_master(pixels):
+    img = Image.new('P', (W * 2, H))
+    for y in range(H):
+        for x in range(W):
+            img.putpixel((x * 2, y), pixels[y][x])
+            img.putpixel((x * 2 + 1, y), pixels[y][x])
+    img.putpalette([v for rgb in PALETTE for v in rgb])
+    os.makedirs(os.path.dirname(MASTER), exist_ok=True)
+    img.save(MASTER, optimize=True)
+
+
+def nearest(rgb):
+    return min(range(16), key=lambda c: dist(rgb, PALETTE[c]))
+
+
+def load_master(fix):
+    """The master as a W x H grid of C64 colours; checks each cell's colours."""
+    src = Image.open(MASTER)
+    if src.size not in ((W * 2, H), (W, H)):
+        sys.exit('%s is %dx%d: it must be 320x200 (or 160x200)' % (os.path.relpath(MASTER, ROOT), *src.size))
+    step = src.width // W
+    rgb = src.convert('RGB')
+    cache = {}
+    pixels = [[0] * W for _ in range(H)]
+    for y in range(H):
+        for x in range(W):
+            p = rgb.getpixel((x * step, y))
+            if p not in cache:
+                cache[p] = nearest(p)
+            pixels[y][x] = cache[p]
+    bad = []
+    for cy in range(25):
+        for cx in range(40):
+            counts = {}
+            for y in range(cy * 8, cy * 8 + 8):
+                for x in range(cx * 4, cx * 4 + 4):
+                    c = pixels[y][x]
+                    if c != BG:
+                        counts[c] = counts.get(c, 0) + 1
+            if len(counts) <= 3:
+                continue
+            keep = sorted(counts, key=lambda c: -counts[c])[:3]
+            bad.append((cx, cy, sorted(counts)))
+            if fix:
+                cols = (BG,) + tuple(keep)
+                for y in range(cy * 8, cy * 8 + 8):
+                    for x in range(cx * 4, cx * 4 + 4):
+                        if pixels[y][x] not in cols:
+                            pixels[y][x] = min(cols, key=lambda k: dist(PALETTE[pixels[y][x]], PALETTE[k]))
+    names = 'black white red cyan purple green blue yellow orange brown lred dgrey grey lgreen lblue lgrey'.split()
+    for cx, cy, cols in bad:
+        print('cell %2d,%2d (master x %3d-%3d, y %3d-%3d): %s' % (
+            cx, cy, cx * 8, cx * 8 + 7, cy * 8, cy * 8 + 7, ', '.join(names[c] for c in cols)))
+    if bad and not fix:
+        sys.exit('%d cells have more than black + 3 colours: fix them, or run with --fix' % len(bad))
+    if bad:
+        print('%d cells reduced to black + 3 colours (--fix); the master is unchanged' % len(bad))
+    return pixels
+
+
 def main():
-    pixels = convert(layout(), painting())
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('--from-scans', action='store_true', help='redraw the master from the cassette scans')
+    parser.add_argument('--fix', action='store_true', help='reduce cells with too many colours instead of stopping')
+    args = parser.parse_args()
+    if args.from_scans:
+        save_master(convert(layout(), painting()))
+        print(os.path.relpath(MASTER, ROOT))
+    pixels = load_master(args.fix)
     bitmap, screen, colram = encode(pixels)
     packed = rle(bitmap) + rle(screen) + rle(colram)
     open(OUT, 'wb').write(packed)

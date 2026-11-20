@@ -23,6 +23,7 @@ Remix changes it on purpose ([remix.md](remix.md)).
 | 11 | The `udg_graphics` copy runs past the table                  | `InitGame`                  | Kept                       |
 | 12 | With no fly, erasing it writes two spaces to `$0000`–`$0001` | `EraseFly`                  | Redirected (`EraseFlyC64`) |
 | 13 | The frog dies at the outer columns, not past them            | `CheckFrogBounds`           | Changed (Remix)            |
+| 14 | Padding and fill patterns between routines                   | throughout                  | Kept                       |
 
 ---
 
@@ -66,14 +67,17 @@ which the game never shows and which stops short of the hi-scores at `$BA00`.
 **12.** `CheckFlyEaten` calls `EraseFly` for every frog that reaches the home row, fly or not, and `EraseFly` stores two
 spaces through `fly_ptr`. With no fly showing (always on sheets 1 and 2, and after `SheetComplete`, which clears the
 pointer's low byte twice and never its high byte) `fly_ptr` is `$0000`, so the Oric overwrote `tmp0` and `key_state`,
-harmlessly. On the C64 `$00`/`$01` is the 6510's port: `$20` in the direction register makes the banking lines inputs,
-which float high, so BASIC, KERNAL and I/O switch in and the machine hangs in the KERNAL's interrupt code. `EraseFlyC64`
-writes the two spaces to `tmp0` and `key_state` at their C64 addresses instead.
+harmlessly. On the C64 `$00`/`$01` is the 6510's port and the same write hangs the machine, so `EraseFlyC64` redirects
+it ([remix.md](remix.md), change 7).
 
 **13.** `frog_col` is one less than the frog's screen column (the frog starts at column 20 with `frog_col` 19), but
 `CheckFrogBounds` tests it as if it were the column: the frog dies at `frog_col` 1 or `$25`, that is when it reaches
 column 2 (the first playfield column) or covers column 39 (the last). Hops are two columns, so from the start the frog
 can make eight hops left (to column 4) and eight right; a ninth looks as if it lands on the visible grass but kills it.
-The limits also keep every death inside the playfield: the splat is drawn at `frog_pos`, and at one column further out it
-would overwrite a row's paper attribute in column 1. Kept in the Oric build; the C64 Remix lets the frog stand in columns
-2–39, blocks hops off the side and kills a carried frog before it moves ([remix.md](remix.md), change 1).
+The limits also keep every death inside the playfield: the splat is drawn at `frog_pos`, and at one column further out
+it would overwrite a row's paper attribute in column 1. Kept in the Oric build; the C64 Remix changes it
+([remix.md](remix.md), change 1).
+
+**14.** NOPs pad places where code was removed, and memory fill patterns (`$FF`, `$55`, `$EA`) sit between routines.
+Most routines start on round addresses, which suggests the game was assembled by hand with a monitor rather than a
+symbolic assembler. Every byte of it is in the source, so the build stays byte-identical.

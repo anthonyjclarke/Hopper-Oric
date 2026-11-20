@@ -11,8 +11,10 @@
 #   make c64-run    build and launch in VICE (x64sc)
 #   make c64-diff   list every game byte that differs from the Oric program
 #   make c64-smoke  boot headless in VICE, screenshots to c64/build/
-#   make c64-intro  redraw the start-up picture (c64/src/intro.rle; Pillow)
+#   make c64-intro  pack the start-up picture c64/art/intro.png (edit it by hand) into c64/src/intro.rle (Pillow)
 #   make c64-font   the Enhanced Oric-style font (c64/src/oricfont.inc) from tools/oric_style_font.py
+#   make c64-sprites  the Enhanced frog and fly sprites (c64/src/sprites.inc; python3.14, the Oric labels)
+#   make c64-flicker  check the test builds for one-frame display glitches (VICE, Pillow; a few minutes)
 
 CA65  ?= ca65
 LD65  ?= ld65
@@ -56,7 +58,7 @@ C64_SRC := c64/src
 C64_BLD := c64/build
 C64_CFG := c64/cfg/c64.cfg
 # basic_stub first: its jmp Start sits at $080D, the game image right after
-C64_MODS := basic_stub hopper platform zp timing video input sound enhanced intro
+C64_MODS := basic_stub hopper platform zp timing video input sound enhanced sprites intro
 C64_OBJS := $(addprefix $(C64_BLD)/,$(addsuffix .o,$(C64_MODS)))
 C64_INCS := $(wildcard $(C64_SRC)/*.inc)
 C64_PRG  := $(C64_BLD)/hopper.prg
@@ -75,6 +77,8 @@ $(C64_PRG): $(C64_OBJS) $(C64_CFG)
 	$(LD65) -C $(C64_CFG) -m $(C64_BLD)/hopper.map -Ln $(C64_BLD)/hopper.lbl -o $@ $(C64_OBJS)
 
 $(C64_BLD)/intro.o $(C64_BLD)/test/intro.o $(C64_BLD)/test-enhanced/intro.o: $(C64_SRC)/intro.rle
+$(C64_BLD)/sprites.o $(C64_BLD)/test/sprites.o $(C64_BLD)/test-enhanced/sprites.o: $(C64_SRC)/sprites.inc
+$(C64_BLD)/enhanced.o $(C64_BLD)/test/enhanced.o $(C64_BLD)/test-enhanced/enhanced.o: $(C64_SRC)/oricfont.inc $(C64_SRC)/instrpage.inc
 
 c64-intro:
 	$(IMG_PY) tools/make_intro.py
@@ -82,6 +86,9 @@ c64-intro:
 # The Oric-style font of the Enhanced version (V7) from its text art
 c64-font:
 	python3 tools/oric_style_font.py
+
+c64-sprites: $(TAP)
+	$(IMG_PY) tools/frog_sprites.py
 
 c64-d64: $(C64_PRG)
 	$(C1541) -format "hopper,hp" d64 $(C64_BLD)/hopper.d64 -write $(C64_PRG) "hopper" >/dev/null
@@ -120,8 +127,29 @@ $(C64_EBLD)/%.o: $(C64_SRC)/%.s $(C64_INCS) | $(C64_EBLD)
 $(C64_EPRG): $(C64_EOBJS) $(C64_CFG)
 	$(LD65) -C $(C64_CFG) -Ln $(C64_EBLD)/hopper.lbl -o $@ $(C64_EOBJS)
 
+# The sound build: the script's menus, then the tunes in order (docs audio)
+C64_SBLD := $(C64_BLD)/test-sound
+C64_SOBJS := $(addprefix $(C64_SBLD)/,$(addsuffix .o,$(C64_MODS) autotest))
+C64_SPRG := $(C64_SBLD)/hopper.prg
+
+$(C64_SBLD):
+	mkdir -p $@
+
+$(C64_SBLD)/%.o: $(C64_SRC)/%.s $(C64_INCS) | $(C64_SBLD)
+	$(CA65) -I $(C64_SRC) -D AUTOTEST -D AUTOTEST_SOUND -g -o $@ $<
+
+$(C64_SPRG): $(C64_SOBJS) $(C64_CFG)
+	$(LD65) -C $(C64_CFG) -Ln $(C64_SBLD)/hopper.lbl -o $@ $(C64_SOBJS)
+
 c64-smoke: $(C64_TPRG) $(C64_EPRG) $(C64_PRG)
 	python3 tools/c64_screens.py --out $(C64_BLD)
 	python3 tools/c64_screens.py --out $(C64_BLD) --only intro
 
-.PHONY: all verify run debug regen clean c64 c64-d64 c64-run c64-diff c64-smoke c64-intro c64-font
+c64-flicker: $(C64_TPRG) $(C64_EPRG)
+	$(IMG_PY) tools/c64_glitch.py
+
+# Record the tunes and effects into docs/sound/ (real time, about 3 minutes)
+c64-sound: $(C64_SPRG)
+	python3 tools/c64_sound.py
+
+.PHONY: all verify run debug regen clean c64 c64-d64 c64-run c64-diff c64-smoke c64-intro c64-font c64-sprites c64-flicker c64-sound

@@ -14,7 +14,7 @@
 | `c64/src/`            | The C64 port: the patched game and the platform layer  |
 | `c64/cfg/c64.cfg`     | ld65 config for the C64 `.prg`                         |
 | `tools/`              | Disassembler, annotations, 6502 core, C64 tools        |
-| `docs/`               | These chapters, the images and the handbook            |
+| `docs/`               | The chapters, images, recordings and the handbook      |
 | `Makefile`            | The Oric and C64 builds                                |
 | `justfile`            | The documentation recipes                              |
 
@@ -35,20 +35,28 @@
 
 ## Build Targets
 
-| Target           | Does                                                                                    |
-|:-----------------|:----------------------------------------------------------------------------------------|
-| `make`           | `build/HOPPER.TAP`, with a listing, map and labels                                      |
-| `make verify`    | Build, then check the tape is byte-identical to `original/HOPPER.TAP`                   |
-| `make run`       | Run in Auric, Oric-1 mode                                                               |
-| `make debug`     | The same with Auric's debugger                                                          |
-| `make regen`     | Regenerate `src/hopper.s` from the tape and `tools/annotations.py`: discards hand edits |
-| `make c64`       | `c64/build/hopper.prg`                                                                  |
-| `make c64-d64`   | `c64/build/hopper.d64`                                                                  |
-| `make c64-run`   | Run the C64 build in VICE with the labels loaded                                        |
-| `make c64-diff`  | Every byte of the C64 game image that differs from the Oric program                     |
-| `make c64-smoke` | Build the scripted test `.prg` and take VICE captures into `c64/build/`                 |
-| `make c64-intro` | Redraw the C64 start-up picture (`c64/src/intro.rle`)                                   |
-| `make c64-font`  | The Enhanced Oric-style font (`c64/src/oricfont.inc`)                                   |
+| Target             | Does                                                                                    |
+|:-------------------|:----------------------------------------------------------------------------------------|
+| `make`             | `build/HOPPER.TAP`, with a listing, map and labels                                      |
+| `make verify`      | Build, then check the tape is byte-identical to `original/HOPPER.TAP`                   |
+| `make run`         | Run in Auric, Oric-1 mode                                                               |
+| `make debug`       | The same with Auric's debugger                                                          |
+| `make regen`       | Regenerate `src/hopper.s` from the tape and `tools/annotations.py`: discards hand edits |
+| `make c64`         | `c64/build/hopper.prg`                                                                  |
+| `make c64-d64`     | `c64/build/hopper.d64`                                                                  |
+| `make c64-run`     | Run the C64 build in VICE with the labels loaded                                        |
+| `make c64-diff`    | Every byte of the C64 game image that differs from the Oric program                     |
+| `make c64-smoke`   | Build the scripted test `.prg` and take VICE captures into `c64/build/`                 |
+| `make c64-flicker` | Check the test builds for one-frame display glitches (`tools/c64_glitch.py`)            |
+| `make c64-sound`   | Record the tunes and effects into `docs/sound/` (`tools/c64_sound.py`, real time)       |
+| `make c64-intro`   | Pack the C64 start-up picture `c64/art/intro.png` into `c64/src/intro.rle`              |
+| `make c64-font`    | The Enhanced Oric-style font (`c64/src/oricfont.inc`)                                   |
+
+Auric is expected at `~/PlatformIO/Projects/Auric` (`build/src/auric`); `make run AURIC_DIR=/path/to/Auric` points
+elsewhere. Run it in **Oric-1 mode**: the game uses Oric-1 ROM locations, which the Atmos ROM keeps elsewhere
+([architecture.md](architecture.md#oric-1-rom-locations)); the ROM files are in [oric_specs.md](oric_specs.md). In VS
+Code, **Terminal → Run Build Task** (⇧⌘B) builds, and the verify and Auric tasks are under **Terminal → Run Task**
+(`.vscode/`, with the recommended *ca65* extension for highlighting).
 
 ---
 
@@ -73,23 +81,27 @@ comments. `src/hopper.s` is now the master and is edited by hand; `make regen` w
 - **C64 patches.** `c64/src/hopper.s` is a copy of `src/hopper.s` patched in place: every patch fits the bytes it
   replaces (padded with `nop`) and carries `; C64:`. Changes to the Oric source are ported to it by hand
   ([porting.md](porting.md)).
-- **Platform code.** C64 code follows the user's house rules: platform zero page `$60`–`$8F`, no long `sei`, and
-  `IdleParse` only in waits that are not counted ([platform_layer.md](platform_layer.md)).
+- **Platform code.** C64 platform code keeps to its own zero page (`$60`–`$CF`), never masks interrupts for long, and
+  uses `IdleParse` only in waits that are not counted ([platform_layer.md](platform_layer.md)).
 
 ---
 
 ## Tools
 
-| Tool                    | Does                                                                                         |
-|:------------------------|:---------------------------------------------------------------------------------------------|
-| `tools/gen_source.py`   | The disassembler that generated `src/hopper.s`                                               |
-| `tools/annotations.py`  | Its names, comments and data layouts                                                         |
-| `tools/m6502.py`        | Its 6502 opcode table                                                                        |
-| `tools/dis_range.py`    | A quick linear disassembly of an address range                                               |
-| `tools/cpu6502.py`      | A 6502 core (from the Light Cycle repository)                                                |
-| `tools/trace6502.py`    | An execution tracer on that core                                                             |
-| `tools/oric_screens.py` | Runs the game's drawing routines and prints the Oric screens                                 |
-| `tools/c64_diff.py`     | The C64 game bytes that differ from the Oric program, by routine                             |
-| `tools/c64_screens.py`  | Headless VICE captures of the scripted C64 run                                               |
-| `tools/make_intro.py`   | The C64 start-up picture from the cover scans                                                |
-| `docs/tools/`           | The handbook generator and the figure tools ([html_documentation.md](html_documentation.md)) |
+| Tool                       | Does                                                                                         |
+|:---------------------------|:---------------------------------------------------------------------------------------------|
+| `tools/gen_source.py`      | The disassembler that generated `src/hopper.s`                                               |
+| `tools/annotations.py`     | Its names, comments and data layouts                                                         |
+| `tools/m6502.py`           | Its 6502 opcode table                                                                        |
+| `tools/dis_range.py`       | A quick linear disassembly of an address range                                               |
+| `tools/cpu6502.py`         | A 6502 core (from the Light Cycle repository)                                                |
+| `tools/trace6502.py`       | An execution tracer on that core                                                             |
+| `tools/oric_screens.py`    | Runs the game's drawing routines and prints the Oric screens                                 |
+| `tools/c64_diff.py`        | The C64 game bytes that differ from the Oric program, by routine                             |
+| `tools/c64_screens.py`     | Headless VICE captures of the scripted C64 run                                               |
+| `tools/c64_glitch.py`      | One-frame display glitches in consecutive VICE captures (`make c64-flicker`)                 |
+| `tools/c64_sound.py`       | The docs' recordings from the sound build, cut by event (`make c64-sound`)                   |
+| `tools/oric_style_font.py` | The Enhanced Oric-style font (`make c64-font`)                                               |
+| `tools/frog_sprites.py`    | The Enhanced frog and fly sprites (`make c64-sprites`)                                       |
+| `tools/make_intro.py`      | The C64 start-up picture: packs its master; `--from-scans` redraws it from the cover scans   |
+| `docs/tools/`              | The handbook generator and the figure tools ([html_documentation.md](html_documentation.md)) |

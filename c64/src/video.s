@@ -35,9 +35,11 @@
 
         .include "c64.inc"
 
-        .export InitVideo, SetRowMap, Present, ParseNextRow, RefreshCharsets, BuildFont
-        .export rowPaper, rowCset, rowMap, curMap
+        .export InitVideo, SetRowMap, Present, ParseNextRow, RefreshCharsets, BuildFont, ParseRow
+        .export rowPaper, rowCset, rowMap, curMap, rowSave0, rowIrqBg
         .import McRowSetup, McDynamic, mcStale, KeepC64Font, TakeF1, FineRow, rowCtl2
+        .import SprSetup, SprTarget, versionShown, IrqDefault, ReturnPageGlyphs
+        .import attractOn, AttractPresent, ParseRowAtt
 
         .segment "CODE"
 
@@ -82,6 +84,7 @@ InitVideo:
         ldx     #C64_ROWS-1
         lda     #COL_BLACK
 @rows:  sta     rowPaper,x
+        sta     rowIrqBg,x
         dex
         bpl     @rows
         lda     #MAP_MENU
@@ -256,8 +259,15 @@ Doubled:
 ; character sets. About 70,000 cycles.
 ;------------------------------------------------------------------------------
 SetRowMap:
+        pha
+        lda     #0                      ; F1: the attract screen ends here
+        sta     attractOn
+        jsr     ReturnPageGlyphs        ; enhanced.s: the page's frame pieces back
+        pla
         sta     curMap
-        ldx     #1
+        ldx     #0
+        stx     versionShown            ; a new screen: no version line yet
+        inx
         stx     mcStale                 ; Enhanced: rebuild the multicolour set
         ldx     #0                      ; multicolour lanes only on the play
         cmp     #MAP_GAME               ; screen in Enhanced (zMcPlay)
@@ -272,6 +282,13 @@ SetRowMap:
 @ctl2:  sta     rowCtl2,x
         dex
         bpl     @ctl2
+        ldx     #C64_ROWS-1             ; no V6 marking until FineRow says so
+@bg:    lda     rowPaper,x
+        sta     rowIrqBg,x
+        dex
+        bpl     @bg
+        jsr     SprSetup                ; V2/V3: sprites off, or set up
+        jsr     IrqDefault              ; the row IRQ's default store order
         pla
         tax
         lda     MapLo,x
@@ -339,7 +356,16 @@ SetRowMap:
 ; Present - show the Oric screen. Clobbers A, X, Y and the zp temporaries.
 ;------------------------------------------------------------------------------
 Present:
-        lda     zRomIrq                 ; front end (the ROM IRQ fills ROM_KEY):
+        lda     rowDH                   ; a double-height top row (the hi-score
+        beq     @go                     ; title, which scrolls): start once the
+@wait:  lda     VIC_CTRL1               ; beam is past both its rows and with
+        bmi     @wait                   ; time to redo them before it comes
+        lda     VIC_RASTER              ; back (lines 67-229), so their top
+        cmp     #FIRST_TEXT_LINE+16     ; and bottom halves change in the same
+        bcc     @wait                   ; frame
+        cmp     #230
+        bcs     @wait
+@go:    lda     zRomIrq                 ; front end (the ROM IRQ fills ROM_KEY):
         beq     :+                      ; F1 flips the version on any screen
         lda     ROM_KEY
         cmp     #KEY_F1 | $80
@@ -389,7 +415,7 @@ Present:
         jmp     @next
 @fast:  jsr     FastRow
         jmp     @next
-@parse: jsr     ParseRow
+@parse: jsr     ParseRowAtt             ; ParseRow (sprites.s: and F1's title)
         bit     zMcPlay                 ; V4: a parsed row's fine scroll
         bpl     @next
         ldx     zRow
@@ -402,6 +428,12 @@ Present:
         lda     zNeedRefresh
         beq     :+
         jsr     RefreshCharsets
+:       bit     zMcPlay                 ; V2/V3: where the frog and fly are
+        bpl     :+
+        jsr     SprTarget
+:       lda     attractOn               ; F1: the Enhanced attract screen
+        beq     :+
+        jsr     AttractPresent
 :       rts
 
 ;------------------------------------------------------------------------------
@@ -441,6 +473,11 @@ ParseNextRow:
         cpx     #C64_ROWS
         bcc     :+
         ldx     #0
+:       lda     attractOn               ; F1: the title rows keep their colour
+        beq     :+                      ; cycle (Present parses them, then
+        cpx     #2                      ; AttractPresent recolours)
+        bcs     :+
+        ldx     #2
 :       stx     zRR
         stx     zRow
         jsr     ParseRow
@@ -497,7 +534,11 @@ FastRow:
         ldy     zPaper
         lda     C64Colour,y
         sta     rowPaper,x
-        lda     #CS_NORMAL
+        ldy     rowIrqBg,x              ; a V6 marking stays (the death flash
+        cpy     #MARK_COLOUR            ; changes the paper under it; the IRQ
+        beq     :+                      ; restores rowPaper after its line)
+        sta     rowIrqBg,x
+:       lda     #CS_NORMAL
         sta     rowCset,x
         sta     rowDH,x
         lda     rowColLo,x
@@ -674,7 +715,11 @@ ParseRow:
         ldy     zRowBg
         lda     C64Colour,y
         sta     rowPaper,x
-        lda     zRowDH
+        ldy     rowIrqBg,x              ; (a V6 marking stays, as in FastRow)
+        cpy     #MARK_COLOUR
+        beq     :+
+        sta     rowIrqBg,x
+:       lda     zRowDH
         beq     @normal
         lda     rowDH,x
         bne     :+
@@ -792,7 +837,9 @@ C64Colour:
 ; Row maps: the Oric row shown on each C64 row. Three rows are hidden on each
 ; screen, chosen from the rows that screen leaves blank (tools/oric_screens.py
 ; prints them); in play, the strip of river under the homes (3) and the two
-; road markings (19, 22).
+; road markings (19, 22). The credits hide 4, 8 and 9: the frog crosses those
+; only by hopping down, so it never shows cut in half on a row (8 and 9 are a
+; whole hop).
 .macro ROWMAP h1, h2, h3
         .repeat ORIC_ROWS, r
         .if r <> h1 .and r <> h2 .and r <> h3
@@ -836,6 +883,7 @@ CustomGlyphs:
 
         .segment "BSS"
 fineNext:       .res 1          ; V4: the row's $D016, from FineRow
+rowIrqBg:       .res C64_ROWS   ; $D021 the row IRQ sets: rowPaper, or V6's grey
 rowMap:         .res C64_ROWS
 rowSrcLo:       .res C64_ROWS
 rowSrcHi:       .res C64_ROWS
