@@ -5,8 +5,8 @@
         "HOPPER",
         "Oric · C64"
     ],
-    "logo": "docs/images/graphics/frog-icon.png",
-    "logoAlt": "The frog, decoded from the Oric game's glyphs",
+    "logo": "docs/images/enhanced/frog-logo.png",
+    "logoAlt": "The frog: the Oric original and the C64 Enhanced sprite",
     "retroFont": {
         "text": "docs/tools/fonts/C64_Pro-STYLE.woff2",
         "mono": "docs/tools/fonts/C64_Pro_Mono-STYLE.woff2",

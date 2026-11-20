@@ -4,6 +4,8 @@
 
 ### Added
 
+- Handbook sidebar logo: the Enhanced sprite frog beside the Oric frog (`docs/images/enhanced/frog-logo.png`, drawn
+  by `frog_logo` in `docs/tools/render_enhanced.py`).
 - C64 Enhanced attract screen (F1): in Enhanced the hi-score screen of the attract loop gets a colour-cycled title, lines
   under the title and round a scroller on row 24, and the sprite frog hopping along row 19 (`AttractStart`,
   `AttractPresent`, `AttractTitle` in `c64/src/sprites.s`; `ParseRowAtt` recolours the title right after `Present`

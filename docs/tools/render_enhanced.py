@@ -475,6 +475,20 @@ def sprite_sheet(game):
     save(img, 'sprites.png')
 
 
+def frog_logo(game):
+    """The handbook's sidebar logo: the Oric frog (docs/tools/render_graphics.py's frog-icon.png, run that first)
+    beside the Enhanced sprite frog, both at 5x on black."""
+    oric = Image.open(os.path.join(ROOT, 'docs', 'images', 'graphics', 'frog-icon.png')).convert('RGB')
+    cv = Canvas(18, 18)
+    draw_frog_sprite(game, cv, 1, 1, 0)
+    enh = cv.scaled(5)
+    gap = 6
+    img = Image.new('RGB', (oric.width + enh.width + gap, max(oric.height, enh.height)), PEPTO[BLACK])
+    img.paste(oric, (0, (img.height - oric.height) // 2))
+    img.paste(enh, (oric.width + gap, (img.height - enh.height) // 2))
+    save(img, 'frog-logo.png')
+
+
 def hop_gif(game):
     """V2: two hops along the start verge, the port's character frog above the sprite frog."""
     vis = [r for r in range(28) if r not in PLAY_HIDDEN]
@@ -572,6 +586,7 @@ def main():
     home_screens(game)
     lane_sheet(game)
     sprite_sheet(game)
+    frog_logo(game)
     hop_gif(game)
     font_figures(game)
 
