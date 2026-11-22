@@ -124,6 +124,9 @@
 
 ### Changed
 
+- `credits.md`: a Restoration Toolkit section on Anthony's private *Old Code Restoration* toolkit, how it grew from
+  *Dork's Dilemma* to the Oric games, and its credits: retro-archaeology-skills, MOSaic, OpenCBM, ZoomFloppy, cc65,
+  VICE, Auric and Marked.
 - Links to the *Light Cycle* repository (github.com/anthonyjclarke/Light-Cycle-Oric) where the game is named: the
   README's history, `original_release.md`, `credits.md`, `html_documentation.md`, `porting.md` and `source_guide.md`.
 - `oric_specs.md`: the ROM and Auric set-up steps are written in the third person, as in *Light Cycle*, so the file
