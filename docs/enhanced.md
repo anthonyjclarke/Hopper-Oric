@@ -7,16 +7,16 @@ the SID's filter and envelopes, and about 16 KB of free memory. The player choos
 on the instructions page and can switch back and forth between games.
 
 **Status.** Built and checked in VICE: the version switch (V0), the attract screen (F1), the instructions page (F3), the
-multicolour lanes (V1), the sprite frog and fly (V2, V3), the smooth lanes (V4), the road markings (V6) and the Oric-style font (V7); their
-pictures are VICE captures. Everything else is planned, and its pictures are mock-ups drawn by
-`docs/tools/render_enhanced.py` from the real game screens ([How the Mock-Ups Are Made](#how-the-mock-ups-are-made)).
-Memory and cycle figures for the planned changes are estimates. This chapter is the overview and the version switch;
-[enhanced_graphics.md](enhanced_graphics.md), [enhanced_sound.md](enhanced_sound.md) and
-[enhanced_platform.md](enhanced_platform.md) describe each change in full.
+multicolour lanes (V1), the sprite frog and fly (V2, V3), the smooth lanes (V4), the road markings (V6) and the
+Oric-style font (V7); their pictures are VICE captures. The rest (S1–S3, V5, F2) is planned, and its pictures are
+mock-ups drawn by `docs/tools/render_enhanced.py` from the real game screens ([How the Mock-Ups Are
+Made](#how-the-mock-ups-are-made)). Memory and cycle figures for the planned changes are estimates. This chapter is the
+overview and the version switch; [enhanced_graphics.md](enhanced_graphics.md), [enhanced_sound.md](enhanced_sound.md)
+and [enhanced_platform.md](enhanced_platform.md) describe each change in full.
 
 ![VICE: Classic play](images/screens/play.png)
 
-![VICE: Enhanced play as built so far (V1 multicolour lanes, V6 road markings)](images/screens/enh-play.png)
+![VICE: Enhanced play (V1 lanes, V2 sprite frog, V6 markings, V7 font)](images/screens/enh-play.png)
 
 ![Mock-up: Enhanced with every planned graphics change](images/enhanced/play-enhanced.png)
 
@@ -34,8 +34,8 @@ rewrites while it plays are noticed by the platform ([enhanced_platform.md](enha
 never disagree with what the game tests. A sprite frog still has the frog's characters underneath it, and a textured
 river is still spaces.
 
-**Classic is today's port.** In Classic the C64 draws exactly what the port draws: every Enhanced cost sits behind a
-flag, so Classic runs the same code paths, give or take a few cycles. Those cycles can move a capture by a frame, so
+**Classic is the original port.** In Classic the C64 draws exactly what the port draws: every Enhanced cost sits behind
+a flag, so Classic runs the same code paths, give or take a few cycles. Those cycles can move a capture by a frame, so
 Classic captures are checked by eye against the last build rather than byte for byte. `make verify` is not affected,
 because `src/hopper.s` never changes. Any change to `c64/src/hopper.s` is marked `; C64: (Enhanced)`, and gameplay
 changes stay in the C64 Remix ([remix.md](remix.md)): Enhanced adds none.
@@ -146,24 +146,24 @@ movement key, and in a game it does nothing. The details are in
 
 ## Order of Work
 
-1. **Polish:** V0 first, so that every later change is built and checked against Classic from the start. Then V7, V1, V6
-   and S1.
-2. **Showcase:** V2, V3, V5, F1 and S2.
+1. **Polish:** V0 first, so that every later change is built and checked against Classic from the start, then V7, V1
+   and V6 (built) and S1 (planned).
+2. **Showcase:** V2, V3 and F1 (built), then V5 and S2 (planned).
 3. **Stretch:** V4 (built), F2 and S3, each optional.
 
 Each step ends with Classic smoke captures that match today's, and Enhanced captures added to the handbook.
 
 ---
 
-## Open Questions
+## Questions
 
-| Question                              | Proposal                                  |
-|:--------------------------------------|:------------------------------------------|
-| Name on the title screen and disk     | HOPPER+ or Hopper Enhanced                |
-| Version at power-up                   | Enhanced                                  |
-| Is a title tune "subtle" (S3)?        | Arranged from the sheet tune, or left out |
-| Version switch on other screens?      | No: the instructions page only            |
-| Switch during a game (paused)?        | No: between games only                    |
+| Question                          | Answer                                 |
+|:----------------------------------|:---------------------------------------|
+| Name on the title screen and disk | Open: HOPPER+ or Hopper Enhanced       |
+| Version at power-up               | Enhanced (built)                       |
+| Is a title tune "subtle" (S3)?    | Open: from the sheet tune, or left out |
+| Version switch on other screens?  | No: the instructions page only (built) |
+| Switch during a game (paused)?    | No: between games only (built)         |
 
 ---
 

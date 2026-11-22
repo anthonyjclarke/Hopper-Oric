@@ -1,9 +1,10 @@
 # Hopper – Enhanced Graphics
 
 Every visual change in the C64 Enhanced version ([enhanced.md](enhanced.md)), one section per change: what the player
-sees, what it is made from, and how the platform layer shows it. All of this is planned. The pictures are mock-ups drawn
-from the real game screens by `docs/tools/render_enhanced.py` ([enhanced.md](enhanced.md#how-the-mock-ups-are-made)).
-Where the change touches the platform layer, the routines are described in [enhanced_platform.md](enhanced_platform.md).
+sees, what it is made from, and how the platform layer shows it. Each section says whether the change is built. Built
+changes are shown in VICE captures; the rest of the pictures are mock-ups drawn from the real game screens by
+`docs/tools/render_enhanced.py` ([enhanced.md](enhanced.md#how-the-mock-ups-are-made)). Where the change touches the
+platform layer, the routines are described in [enhanced_platform.md](enhanced_platform.md).
 
 ---
 
@@ -199,8 +200,8 @@ keep the C64 font for blue and red text.
 that to `$3100` as usual, and `RestoreCharset` brings it back for every menu. A flip on the instructions page calls
 `SetFontC64`: the screen is blanked, `SetFont` copies the other font in (from RAM, so the character ROM needn't be
 banked in and interrupts stay on), the copy at `$3100` is updated, `RefreshCharsets` rebuilds the inverse and
-double-height sets, and the screen comes back, a couple of frames later. The font data (768 bytes) is in `HIDATA`, and the C64
-copy (768 bytes) at `$C800`–`$CAFF` in bank 3 RAM ([enhanced_platform.md](enhanced_platform.md#memory)).
+double-height sets, and the screen comes back, a couple of frames later. The font data (768 bytes) is in `HIDATA`, and
+the C64 copy (768 bytes) at `$C800`–`$CAFF` in bank 3 RAM ([enhanced_platform.md](enhanced_platform.md#memory)).
 
 ---
 

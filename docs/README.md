@@ -1,8 +1,10 @@
 # Hopper – Documentation
 
-The chapters of the *Hopper* reconstruction: the 1983 Oric-1 game rebuilt as commented ca65 source, byte-identical to
-the tape, and its Commodore 64 version, which runs the same game code on a small platform layer in two looks, Classic
-and Enhanced. The [project README](../README.md) introduces the game.
+A Commodore 64 version of *Hopper*, the *Frogger*-style game for the Oric-1 written by A.J. Clarke and published on tape
+by PSS in 1983. The C64 version runs the Oric game code, every byte at its Oric address, on a small platform layer, in
+two looks, Classic and Enhanced. The Oric original is kept alongside it: the tape, `original/HOPPER.TAP`, and its full
+commented ca65 source in `src/`, which `make verify` assembles back into a byte-identical tape for any Oric emulator
+(`make run` starts it in Auric). The [project README](../README.md) introduces the game.
 
 **[HOPPER.html](HOPPER.html)** gathers every document below, with the images and audio embedded, into one page that
 reads offline in a browser.
@@ -13,7 +15,7 @@ reads offline in a browser.
 
 | Document                                   | Covers                                                       |
 |:-------------------------------------------|:-------------------------------------------------------------|
-| [player_guide.md](player_guide.md)         | How to play: menus, controls, the river and road, scoring    |
+| [player_guide.md](player_guide.md)         | The rules: menus, controls, the river and road, scoring      |
 | [original_release.md](original_release.md) | The PSS cassette cover and the PSS advert                    |
 | [graphics.md](graphics.md)                 | Oric screens and glyphs decoded from the tape; C64 captures  |
 | [sound.md](sound.md)                       | The AY effects and tunes, the SID, and recordings to play    |

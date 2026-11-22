@@ -5,8 +5,9 @@
 ## The Game
 
 A.J. Clarke wrote *Hopper* for the Oric-1, and PSS (Personal Software Services, 452 Stoney Stanton Road, Coventry)
-published it on cassette in 1983, alongside his *Light Cycle*. The game's own credits name the author and the publisher;
-everything in this repository starts from the tape image `original/HOPPER.TAP`.
+published it on cassette in 1983, alongside [*Light Cycle*](https://github.com/anthonyjclarke/Light-Cycle-Oric) by the
+same author. The game's own credits name the author and the publisher; everything in this repository starts from the
+tape image `original/HOPPER.TAP`.
 
 ---
 

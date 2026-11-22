@@ -16,29 +16,29 @@ support.
 The sidebar's **Switch to the C64 font** button sets the page in Style's [C64
 TrueType](https://style64.org/c64-truetype) fonts. Their [licence](https://style64.org/c64-truetype/license) allows
 embedding them unmodified with `@font-face` but not offering the files for download, so `docs/tools/fonts/` ignores
-everything but its own `.gitignore`. To include the option, copy `C64_Pro-STYLE.woff2` and `C64_Pro_Mono-STYLE.woff2`
-from the package's `fonts/` folder, unmodified, into `docs/tools/fonts/`. Without them the button is left out and `just
-docs-check` reports the handbook stale, because the committed handbook is generated with them. The paths and labels are
-`retroFont` in `docs/handbook.json`.
+everything but its own `.gitignore`. The option is included when `C64_Pro-STYLE.woff2` and `C64_Pro_Mono-STYLE.woff2`
+from the package's `fonts/` folder are copied, unmodified, into `docs/tools/fonts/`. Without them the button is left out
+and `just docs-check` reports the handbook stale, because the committed handbook is generated with them. The paths and
+labels are `retroFont` in `docs/handbook.json`.
 
 ---
 
 ## Regeneration
 
-Run from the repository root, in this order. The figure tools need Pillow: on this Mac use Homebrew's
+The steps run from the repository root, in this order. The figure tools need Pillow, which on this Mac is in Homebrew's
 `/opt/homebrew/bin/python3.14`.
 
-| Step                        | Command                                  | Needs            | Writes                     |
-|:----------------------------|:-----------------------------------------|:-----------------|:---------------------------|
-| Build the Oric tape         | `make verify`                            | cc65             | `build/HOPPER.TAP`, labels |
-| Build the C64 port and test | `make c64-smoke`                         | cc65, VICE       | `c64/build/`               |
-| Check for display glitches  | `make c64-flicker`                       | VICE, Pillow     | –                          |
-| Capture the screens         | `python3 docs/tools/capture_screens.py`  | VICE (`x64sc`)   | `docs/images/screens/`     |
-| Decode the Oric figures     | `python3 docs/tools/render_graphics.py`  | Pillow, VICE ROM | `docs/images/graphics/`    |
-| Draw the appendix figures   | `python3 docs/tools/render_oric.py`      | Pillow           | `docs/images/graphics/`    |
-| Draw the Enhanced mock-ups  | `python3 docs/tools/render_enhanced.py`  | Pillow, VICE ROM | `docs/images/enhanced/`    |
-| Generate the HTML           | `node docs/tools/build_docs.mjs`         | Node.js 20+      | `docs/HOPPER.html`         |
-| Check the HTML is current   | `node docs/tools/build_docs.mjs --check` | Node.js 20+      | –                          |
+| Step                           | Command                                  | Needs            | Writes                     |
+|:-------------------------------|:-----------------------------------------|:-----------------|:---------------------------|
+| The Oric tape                  | `make verify`                            | cc65             | `build/HOPPER.TAP`, labels |
+| The C64 port and test build    | `make c64-smoke`                         | cc65, VICE       | `c64/build/`               |
+| The display glitch check       | `make c64-flicker`                       | VICE, Pillow     | –                          |
+| The screen captures            | `python3 docs/tools/capture_screens.py`  | VICE (`x64sc`)   | `docs/images/screens/`     |
+| The Oric figures               | `python3 docs/tools/render_graphics.py`  | Pillow, VICE ROM | `docs/images/graphics/`    |
+| The appendix figures           | `python3 docs/tools/render_oric.py`      | Pillow           | `docs/images/graphics/`    |
+| The Enhanced mock-ups and logo | `python3 docs/tools/render_enhanced.py`  | Pillow, VICE ROM | `docs/images/enhanced/`    |
+| The HTML                       | `node docs/tools/build_docs.mjs`         | Node.js 20+      | `docs/HOPPER.html`         |
+| The HTML currency check        | `node docs/tools/build_docs.mjs --check` | Node.js 20+      | –                          |
 
 The `just` recipes wrap them:
 
@@ -46,10 +46,10 @@ The `just` recipes wrap them:
 just docs
 ```
 
-`just docs` runs every step. `just docs-html` only regenerates the HTML from the current Markdown and images, `just
-docs-check` fails if a chapter names a label that is not in the source or the saved HTML is stale, and `just docs-watch`
-regenerates it whenever a source changes. `just docs-graphics` and `just docs-screens` run one step. The recipes use
-`DOCS_PYTHON`, else Homebrew's `python3.14`, else `python3`.
+`just docs` runs every step but the glitch check. `just docs-html` only regenerates the HTML from the current Markdown
+and images, `just docs-check` fails if a chapter names a label that is not in the source or the saved HTML is stale, and
+`just docs-watch` regenerates it whenever a source changes. `just docs-graphics` and `just docs-screens` run only the
+figure or capture steps. The recipes use `DOCS_PYTHON`, else Homebrew's `python3.14`, else `python3`.
 
 ---
 
@@ -65,16 +65,16 @@ regenerates it whenever a source changes. `just docs-graphics` and `just docs-sc
   routines running on `tools/cpu6502.py` (`tools/oric_screens.py`, with the waits stubbed out) and rendered with the
   Oric's serial attributes; letters come from VICE's C64 character ROM, narrowed to 6 pixels, because the Oric ROM font
   is not on the tape. The figures are deterministic.
-- **Oric appendix figures.** `render_oric.py` draws the palette, a HIRES line of serial attributes and the AY's
-  envelope shapes for `oric_specs.md`. It reads nothing from the game, so the file is the same in every Oric reconstruction.
-- **Oric appendix screenshot.** `oric-basic-hires.png` is a capture of `oric_specs.md`'s HIRES BASIC example running in the
-  Auric emulator on the Atmos ROM; it is not generated, so re-render it by hand if the example changes.
-- **C64 Enhanced mock-ups.** `render_enhanced.py` draws the pictures of the planned changes in the C64 Enhanced
-  chapters: the screens are the game's own (drawn on the 6502 core, as above), shown the way the port shows them (rows
-  hidden, glyphs widened to 8 pixels, the C64 font, the Pepto palette), with each planned change applied as the chapters
-  describe it. It also writes the `hop.gif` animation and the font figures, from `tools/oric_style_font.py`. When a
-  change is built, a VICE capture replaces its mock-up: `capture_screens.py` records `enh-smooth.gif` (V4) one frame per
-  VICE run.
+- **Oric appendix figures.** `render_oric.py` draws the palette, a HIRES line of serial attributes and the AY's envelope
+  shapes for `oric_specs.md`. It reads nothing from the game, so the file is the same in every Oric reconstruction.
+- **Oric appendix screenshot.** `oric-basic-hires.png` is a capture of `oric_specs.md`'s HIRES BASIC example running in
+  the Auric emulator on the Atmos ROM; it is not generated, and is captured again by hand if the example changes.
+- **C64 Enhanced mock-ups.** `render_enhanced.py` draws the mock-ups in the C64 Enhanced chapters: the screens are the
+  game's own (drawn on the 6502 core, as above), shown the way the port shows them (rows hidden, glyphs widened to 8
+  pixels, the C64 font, the Pepto palette), with each change applied as the chapters describe it. It also writes the
+  `hop.gif` animation, the font figures (from `tools/oric_style_font.py`) and the handbook's sidebar logo
+  (`frog-logo.png`, the Oric frog beside the sprite frog). When a change is built, a VICE capture replaces its mock-up:
+  `capture_screens.py` records `enh-smooth.gif` (V4) one frame per VICE run.
 - **The start-up picture's design.** `tools/make_intro.py` writes `docs/images/graphics/intro-design.png` with
   `c64/src/intro.rle` (`make c64-intro`).
 - **Recordings.** `make c64-sound` (`tools/c64_sound.py`) runs the sound build (`-D AUTOTEST_SOUND`: the test script's
@@ -106,4 +106,5 @@ source nor the C64 source. Placeholders that only look like labels go in `docs/t
 The generator uses [Marked](https://marked.js.org/) 17.0.5 to convert the Markdown, and the page embeds
 [Mermaid](https://mermaid.js.org/) 10.9.3 for the diagrams. Both are pinned and vendored in `docs/tools/vendor/` with
 their licences, which are also reproduced in the handbook. The generator and the page templates are carried over
-unchanged from the *Light Cycle*, *Frak!* and *Thing On A Spring* documentation.
+unchanged from the [*Light Cycle*](https://github.com/anthonyjclarke/Light-Cycle-Oric), *Frak!* and *Thing On A Spring*
+documentation.

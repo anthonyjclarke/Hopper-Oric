@@ -1,9 +1,9 @@
 # Hopper – Enhanced Sound
 
-The sound changes in the C64 Enhanced version ([enhanced.md](enhanced.md)). All are planned and none has been heard yet.
+The sound changes in the C64 Enhanced version ([enhanced.md](enhanced.md)). All are planned; none is built yet.
 The game's sound code is unchanged: it still writes AY registers through `AYWrite`, which the port replaces with
 `AyWriteC64` ([sound.md](sound.md#c64-playback)). Enhanced changes only how those writes become SID sound. In Classic
-the SID plays exactly as it does today.
+the SID plays exactly as in the port.
 
 ---
 
@@ -64,7 +64,7 @@ The splash is the only new trigger. The platform can tell a drowning from a squa
 
 **What changes.** A short SID tune for the home screen and attract loop. The original has no title music, so to stay
 close to the game it would be arranged from the sheet tune rather than written fresh. It is the least "subtle" option
-and an open question in [enhanced.md](enhanced.md#open-questions).
+and an open question in [enhanced.md](enhanced.md#questions).
 
 **How it works.** A small player in the frame interrupt, running only on the home screen, credits and picture, and
 silent when a game starts. The tune and player go in `$9000`–`$9FFF`, which the CPU can use freely

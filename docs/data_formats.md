@@ -74,7 +74,7 @@ first-gap flag and a gap countdown, with minimum gaps in `r17_gap_min` … The o
 | `keys_set1` | `$16C0` | 15 bytes copied over the three tables for control choice 1      |
 | `keys_set2` | `$16D0` | The same for choice 2                                           |
 
-Note the order: the third key is **down** (`$08`) and the fourth **up** (`$04`), whatever the comment in the original
+The order matters: the third key is **down** (`$08`) and the fourth **up** (`$04`), whatever the comment in the original
 listing suggested; `KeysToDir` reads them that way. **C64:** the rows hold the CIA1 port A column select and the columns
 the port B row mask; choice 1 is Z X K M, and choice 2 is filled by `RedefineKeys` (key bits included, since the Oric's
 choice 2 orders its keys up, down, left, right), which also writes the four key names into the immediate operands

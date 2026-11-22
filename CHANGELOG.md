@@ -6,8 +6,8 @@
 
 - Handbook sidebar logo: the Enhanced sprite frog beside the Oric frog (`docs/images/enhanced/frog-logo.png`, drawn
   by `frog_logo` in `docs/tools/render_enhanced.py`).
-- C64 Enhanced attract screen (F1): in Enhanced the hi-score screen of the attract loop gets a colour-cycled title, lines
-  under the title and round a scroller on row 24, and the sprite frog hopping along row 19 (`AttractStart`,
+- C64 Enhanced attract screen (F1): in Enhanced the hi-score screen of the attract loop gets a colour-cycled title,
+  lines under the title and round a scroller on row 24, and the sprite frog hopping along row 19 (`AttractStart`,
   `AttractPresent`, `AttractTitle` in `c64/src/sprites.s`; `ParseRowAtt` recolours the title right after `Present`
   parses it, and the round-robin parse skips it). The colour is per letter, not per raster line as in the mock-up: the
   row interrupt has no cycles to spare. `C64FontCopy` moves to `$C800` (bank 3 RAM) to make room in `HIDATA`.
@@ -20,8 +20,8 @@
   credits add `PRESS [3] FOR NEW KEYS` under `PRESS [1] TO START`.
 - Recordings to play in the docs: the four in-game tunes, the sheet tune, the frog-home jingle, a hop, the death and the
   low-time tone, recorded from the C64 port in VICE into `docs/sound/` (AAC) and embedded in `sound.md` and the
-  handbook. `make c64-sound` (`tools/c64_sound.py`) runs a new sound build (`-D AUTOTEST_SOUND`: the four tunes in order,
-  each `PickTune` call logged), finds each sound with VICE's monitor, records the run in real time and cuts it.
+  handbook. `make c64-sound` (`tools/c64_sound.py`) runs a new sound build (`-D AUTOTEST_SOUND`: the four tunes in
+  order, each `PickTune` call logged), finds each sound with VICE's monitor, records the run in real time and cuts it.
 - C64 version switch on the instructions page only: F1 there flips Classic / Enhanced and shows the page again in the
   new look (`TakeF1` restarts the attract loop); on any other screen it is dropped. Classic's page shows the version
   line (`[F1] VERSION  CLASSIC  ENHANCED`, row 17) once the frog has laid it down. The version line on the menus and
@@ -124,6 +124,15 @@
 
 ### Changed
 
+- Links to the *Light Cycle* repository (github.com/anthonyjclarke/Light-Cycle-Oric) where the game is named: the
+  README's history, `original_release.md`, `credits.md`, `html_documentation.md`, `porting.md` and `source_guide.md`.
+- `oric_specs.md`: the ROM and Auric set-up steps are written in the third person, as in *Light Cycle*, so the file
+  stays identical in both repositories.
+- Docs pass, as in *Light Cycle*: the README and every chapter are in the third person (no "you", no instructions to
+  the reader), and both READMEs open on the C64 version, with the Oric original, its commented source, `make verify`
+  and `make run` kept alongside it. Stale status brought up to date against the code: the Enhanced chapters (V2–V4,
+  F1, F3 built; no game hooks), the port's phase table (`v1.0` tagged), the open questions, and the build tables
+  (`make c64-sprites`, `make clean`, `tools/instructions_page.py`, what `just docs` runs).
 - Docs review: one home per topic, with links instead of repeats. The README is now a front page (the game, Oric,
   Classic and Enhanced screenshots, the versions, a short history, then a quick start and pointers to the chapters); its
   layout, build, Auric, reconstruction, quirks and memory-map sections are in `source_guide.md`, `architecture.md` and
@@ -195,8 +204,9 @@
   above's character set (double-height menu text, the hi-score table, multicolour lanes) because the row interrupt's
   `$D018` store, spread over 10 cycles with `$D016` and `$D021` since V4, could land after that badline started. The
   three values are now loaded into registers and stored back to back after `IRQ_PAD` nops, set to 1 from VICE
-  measurements (0–4 clean on the menu, 5 late; only 0–1 clean with the frog's sprites on a row boundary; later 0). Found by decoding the user's VICE recordings and reproduced on headless captures
-  of the sound menu (8 glitches in 46 frames, now 0).
+  measurements (0–4 clean on the menu, 5 late; only 0–1 clean with the frog's sprites on a row boundary; later 0). Found
+  by decoding the user's VICE recordings and reproduced on headless captures of the sound menu (8 glitches in 46 frames,
+  now 0).
 - C64 Enhanced log and turtle tops flickered: `$D022`/`$D023` land after the badline stall, so a lane's first line
   sometimes took the colours of the row above. A row without multicolour cells now loads the next row's colours.
 - C64 hi-score title tore now and then (scrolled top halves over old bottom halves for a frame): `Present` updated its

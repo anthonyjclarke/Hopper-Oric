@@ -22,8 +22,9 @@ of who did what are for the owner to fill in.
 
 ## The Documentation
 
-These chapters and the handbook follow the documentation format of Anthony's C64 reconstructions (*Light Cycle*,
-*Frak!*, *Thing On A Spring*). The handbook generator and templates are carried over from those repositories unchanged.
+These chapters and the handbook follow the documentation format of Anthony's C64 reconstructions ([*Light
+Cycle*](https://github.com/anthonyjclarke/Light-Cycle-Oric), *Frak!*, *Thing On A Spring*). The handbook generator and
+templates are carried over from those repositories unchanged.
 
 ---
 

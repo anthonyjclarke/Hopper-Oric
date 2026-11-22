@@ -63,8 +63,8 @@ frames (`WaitNoKeys`), so the key that chose 2, or a bounce, isn't taken as LEFT
 writes each key's column select, row mask and key bit into the Oric's second key table (`keys_set2`), which the menu's
 own code then copies into use as before, and puts the four key names into the instructions text.
 
-**Why.** Fixed punctuation keys don't survive host keymaps in VICE, and choosing your own keys is the usual C64
-convention.
+**Why.** Fixed punctuation keys don't survive host keymaps in VICE, and letting the player choose the keys is the usual
+C64 convention.
 
 ---
 

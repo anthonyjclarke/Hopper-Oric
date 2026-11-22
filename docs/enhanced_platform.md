@@ -1,10 +1,10 @@
 # Hopper – Enhanced Platform Layer
 
 How the C64 Enhanced version ([enhanced.md](enhanced.md)) fits into the platform layer
-([platform_layer.md](platform_layer.md)): the version flag, hooks into the game (none so far), the changes to the raster
-interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. The version flag (V0) and
-the multicolour lanes (V1) are built, in `c64/src/platform.s` and `c64/src/enhanced.s`; the rest is the plan. Names in
-this chapter that don't exist in `c64/src/` yet are listed under [Planned Names](#planned-names).
+([platform_layer.md](platform_layer.md)): the version flag, hooks into the game (none), the changes to the raster
+interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. Everything here is built
+(`c64/src/platform.s`, `enhanced.s`, `sprites.s`) except the texture (V5), the SID changes and disk hi-scores (F2).
+Names in this chapter that don't exist in `c64/src/` yet are listed under [Planned Names](#planned-names).
 
 ---
 
@@ -13,7 +13,7 @@ this chapter that don't exist in `c64/src/` yet are listed under [Planned Names]
 **Built.** One zero-page byte, `zEnhanced` (`$90`, in the platform's area): 0 for Classic, `$FF` for Enhanced. `Start`
 sets it to `$FF`, so a power-up is in Enhanced. Nothing else writes it but the switch: RESTORE goes through the Oric's
 RESET path (`NmiHandler`, `WarmStart`), which doesn't touch the platform's zero page, so the choice survives it. Every
-enhancement will test it, and with it clear the platform runs exactly today's code paths. There is one `.prg` with both
+enhancement tests it, and with it clear the platform runs exactly Classic's code paths. There is one `.prg` with both
 looks loaded all the time, so flipping costs nothing but a redraw.
 
 The switch is on the instructions page only. `ScanRomKey` reports F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like
@@ -26,11 +26,11 @@ on every new screen. A flip clears the screen, inverts `zEnhanced`, changes the 
 blanked for a couple of frames), silences the sound, resets the stack and starts the attract loop again
 (`AttractLoop`), so the page comes back in the new look: Classic's frog walk or Enhanced's page (F3).
 
-`DrawVersionLine` writes row 17 of the Oric screen (`versionAt`, set by `CreditsEndC64`) from `VersionText`: a cyan ink attribute and `[F1]
-VERSION`, then each version name after a blue ink attribute. For the chosen one it makes the attribute white and sets
-bit 7 of each character, the Oric's inverse, which the port shows as black on white. Because the row starts with a
-character and has attributes further in, `ScanRow` sends it to `ParseRow` on its first copy, so it shows in the right
-colours at once ([porting.md](porting.md#decisions)).
+`DrawVersionLine` writes row 17 of the Oric screen (`versionAt`, set by `CreditsEndC64`) from `VersionText`: a cyan ink
+attribute and `[F1] VERSION`, then each version name after a blue ink attribute. For the chosen one it makes the
+attribute white and sets bit 7 of each character, the Oric's inverse, which the port shows as black on white. Because
+the row starts with a character and has attributes further in, `ScanRow` sends it to `ParseRow` on its first copy, so it
+shows in the right colours at once ([porting.md](porting.md#decisions)).
 
 `make c64-smoke` presses F1 on the Enhanced page (`c64/src/autotest.s`): its `instructions` capture shows the page,
 and `credits` and `credits-done` the Classic page that follows. The game it then starts is in Classic.
@@ -39,14 +39,15 @@ and `credits` and `credits-done` the Classic page that follows. The game it then
 
 ## Hooks
 
-**None so far.** The plan expected two hooks, in `SetTurtleFrame` and `SetFrogGfx`, so that the multicolour set could
+**None.** The plan expected two hooks, in `SetTurtleFrame` and `SetFrogGfx`, so that the multicolour set could
 follow the glyphs the game rewrites. The frog turned out to be rewritten in six places (four directions, the splat and
 the frog in a home), with no spare bytes in most of them. So the platform notices the changes itself instead, in
 `McDynamic` ([enhanced_graphics.md](enhanced_graphics.md#v1--multicolour-lane-graphics)), and `make c64-diff` shows no
 game bytes added for Enhanced.
 
 Everything reads the game's state without changing the game: `turtle_frame`, the glyphs at `CHARSET`, the Oric screen,
-and later `frog_row`, `frog_col`, `fly_on`, `fly_ptr`, `lane_speeds` and the AY register copy.
+`frog_row`, `frog_col`, `fly_on` and `fly_ptr` for the sprites and `lane_speeds` for the smooth lanes; S1 would add the
+AY register copy.
 
 ---
 

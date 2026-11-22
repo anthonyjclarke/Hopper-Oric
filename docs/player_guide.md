@@ -9,10 +9,10 @@ main loop; one pass takes about 30 ms on the Oric ([architecture.md](architectur
 
 The tape autoruns. Two menus come first, once only: they come back only after the RESET button (RESTORE on the C64).
 
-| Screen   | Keys    | Does                                                                        |
-|:---------|:--------|:----------------------------------------------------------------------------|
-| Sound    | 1, 2, 3 | No sound, quiet sound, or loud sound (the AY volumes doubled)               |
-| Controls | 1, 2    | Choose the control keys (below); the instructions take the chosen key names |
+| Screen   | Keys    | Does                                                                |
+|:---------|:--------|:--------------------------------------------------------------------|
+| Sound    | 1, 2, 3 | No sound, quiet sound, or loud sound (the AY volumes doubled)       |
+| Controls | 1, 2    | Chooses the control keys (below); the instructions take their names |
 
 Then the attract cycle: a frog hops round the screen leaving the credits and instructions behind it, they stay for about
 18 seconds, and the hi-score table follows with its title scrolling. **1** starts a game and **2** shows the
@@ -26,12 +26,12 @@ credits again ([porting.md](porting.md#decisions)). On the C64 instructions page
 
 ## Controls
 
-| Machine | Choice | Left                              | Right | Up | Down | Pause |
-|:--------|:-------|:----------------------------------|:------|:---|:-----|:------|
-| Oric    | 1      | Z                                 | X     | '  | /    | P     |
-| Oric    | 2      | ,                                 | .     | A  | Z    | P     |
-| C64     | 1      | Z                                 | X     | K  | M    | P     |
-| C64     | 2      | Redefine: you press the four keys |       |    |      |       |
+| Machine | Choice | Left                                 | Right | Up | Down | Pause |
+|:--------|:-------|:-------------------------------------|:------|:---|:-----|:------|
+| Oric    | 1      | Z                                    | X     | '  | /    | P     |
+| Oric    | 2      | ,                                    | .     | A  | Z    | P     |
+| C64     | 1      | Z                                    | X     | K  | M    | P     |
+| C64     | 2      | Redefined: the player picks all four |       |    |      |       |
 
 On the C64, joystick port 2 works with either choice, and **Redefine keys** asks for left, right, up and down in turn
 under the menu; a key it can't take (P, SPACE, a key already chosen and a few more) shows **CAN'T USE** in red and it
@@ -108,7 +108,7 @@ harder sheet.
 | From sheet  | Change                                                                 |
 |:------------|:-----------------------------------------------------------------------|
 | 2           | The turtles start diving                                               |
-| 3           | A fly appears in a random empty home for a while: eat it for the bonus |
+| 3           | A fly appears in a random empty home for a while, worth the fly bonus  |
 | 3 and 7     | Every lane moves one frame faster (none faster than every 3 frames)    |
 | 7, 15, 23 … | The snake and the turtles speed up, and the whole game a little        |
 

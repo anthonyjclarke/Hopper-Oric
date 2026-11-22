@@ -1,7 +1,8 @@
 # Hopper – Sound
 
-Read from the code. The Oric plays everything on its AY-3-8912 through `AYWrite`; the C64 plays the same register writes
-on the SID ([C64 Playback](#c64-playback)). The [recordings](#recordings) are of the C64 port in VICE.
+Everything here is read from the code. The Oric plays all of it on its AY-3-8912 through `AYWrite`; the C64 plays the
+same register writes on the SID ([C64 Playback](#c64-playback)). The [recordings](#recordings) are of the C64 port in
+VICE.
 
 ---
 

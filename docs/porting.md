@@ -1,8 +1,9 @@
 # Hopper – Porting to the C64
 
-How the Commodore 64 version is built and where it stands. It follows the Light Cycle port's method: a **faithful
-re-host**, not a rewrite. The game logic is the Oric code itself; only the hardware underneath is replaced, behind a
-small platform layer in `c64/src/`.
+How the Commodore 64 version is built and where it stands. It follows the [Light
+Cycle](https://github.com/anthonyjclarke/Light-Cycle-Oric) port's method: a **faithful re-host**, not a rewrite. The
+game logic is the Oric code itself; only the hardware underneath is replaced, behind a small platform layer in
+`c64/src/`.
 
 ---
 
@@ -33,14 +34,16 @@ them back. The C64 port therefore keeps the Oric screen as it is and shows it, r
 | 0     | Build, `.prg` with BASIC stub, game image mover  | Done 17-11-2026            |
 | 1     | Platform layer: display, timing, input, sound    | Done 17-11-2026            |
 | 2     | Whole game running: menus, credits, play, scores | Done 17-11-2026, see below |
-| 3     | Checked by hand: sound, keys, joystick, NTSC     | Next                       |
-| 4     | Release: `.prg`, `.d64`, tag                     | –                          |
+| 3     | Checked by hand: sound, keys, joystick, NTSC     | Sound and keys play-tested |
+| 4     | Release: `.prg`, `.d64`, tag                     | Tagged `v1.0` 21-11-2026   |
 
 Verified in VICE with `make c64-smoke` (headless captures of a scripted run, `c64/src/autotest.s`): the sound menu with
 double height and blink, the credits with the hopping frog, the hi-score table with the scrolling double-height title,
 the sheet-start signs, the playfield with every lane moving, the snake, hops, the death flash and the status line, the
-start-up picture, and redefining the keys (a refused P and a repeated key). **Not yet tried:** the SID sound (headless
-VICE has none), real key presses and joystick, NTSC timing, the name entry, and a full sheet.
+start-up picture, and redefining the keys (a refused P and a repeated key). The scripted run does not cover the SID
+sound (headless VICE has none), which is recorded in real time instead (`make c64-sound`,
+[sound.md](sound.md#recordings)), nor the joystick, NTSC timing, the name entry or a full sheet; the sound and the keys
+have been play-tested by hand in VICE.
 
 ---
 
@@ -138,8 +141,7 @@ time by the clock instead.
 **Keys.** Choice 1 is Z, X, K, M (left, right, up, down): letters only, because punctuation keys move about with VICE's
 host keymaps (the first try, Z X `@` `/`, was unusable). Choice 2, the Oric's second fixed set, is now **Redefine keys**
 (`RedefineKeys`, [remix.md](remix.md) changes 2 and 11, which also list the keys it refuses). Joystick port 2 works with
-either choice. Note that `key_bits` `$08` is **down** and `$04` up (`KeysToDir`); the third table slot is down, the
-fourth up.
+either choice. `key_bits` `$08` is **down** and `$04` up (`KeysToDir`); the third table slot is down, the fourth up.
 
 **Row parsing in key waits.** A row only gets colours from attributes past column 1 when it is parsed. The game's key
 waits call `Idle`, which only draws, because `CheckMenuKeys` runs inside counted loops (the hi-score scroll) and a parse
@@ -187,7 +189,7 @@ envelope; a louder level retriggers the envelope, a softer one lets it decay. Th
 | Double height per cell                    | Per row: normal characters in a double-height row (the hedge beside GAME OVER) are stretched |
 | Paper and colour change in the same frame | Paper is set as the beam reaches each row: a frame drawn mid-change can tear                 |
 | Oric ROM font                             | The C64's font (the Oric's is not on the tape)                                               |
-| Key sets: `Z X ' /` or `, . A Z`          | `Z X K M`, or keys you choose ([remix.md](remix.md))                                         |
+| Key sets: `Z X ' /` or `, . A Z`          | `Z X K M`, or keys the player chooses ([remix.md](remix.md))                                 |
 | The frog dies at columns 2 and 39         | It can stand there; no hop off the side ([remix.md](remix.md))                               |
 | RESET + up-left jumps to `$A800`          | The same; on the C64 that is character data, so it crashes                                   |
 
