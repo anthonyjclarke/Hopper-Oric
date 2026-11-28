@@ -38,3 +38,30 @@ ever increasing game speed, a hi-score table, full colour and sound.
 Everything the advert lists is there in the code: three road lanes, the snake on the middle bank, diving turtles from
 sheet 2, the fly from sheet 3, the TIME limit, the speed-ups as sheets are cleared, and the eight-entry hi-score table
 ([player_guide.md](player_guide.md)).
+
+---
+
+## Oric-Mon
+
+I wrote *Hopper* with Oric-Mon, a machine code monitor for the Oric-1 that PSS also published in 1983, credited to A. J.
+Clarke. It's in the PSS advert above, beside *Hopper*. I pulled it together rather than writing all of it: some of it
+wasn't my own work, and I can't remember now where those parts came from. What it gave me was a way to type the code
+straight in, then disassemble it and check it as I went along. That way of working shows in *Hopper*: routines on
+round addresses, fill bytes between them, `nop` runs where code was taken out, and a hidden exit to `$A800`
+([quirks.md](quirks.md)).
+
+Oric-Mon has its own page on oric.org: [Oric-Mon](https://www.oric.org/software/oric_mon-79.html). It has the tape
+images, the inlay, scans of the tape labels, two screenshots and the manual, in English and in French. The page records
+two releases:
+
+| Release | Machines       | Tape                                                    | Manual  |
+|:--------|:---------------|:--------------------------------------------------------|:--------|
+| First   | Oric-1         | `oricmon.tap`                                           | English |
+| Second  | Oric-1, Atmos  | Side 1 `oricmono.tap` (Oric-1); side 2 `oricmona.tap`   | French  |
+
+The second release used the same "Oric-1" inlay with a yellow "Atmos compatible" sticker added. Its side 1 is the
+Oric-1 version with the end address cut from `$B1FF` to `$B180`, because the bytes past `$B180` were only whatever was in
+memory when the tape was saved. The page recommends the English manual over the French one.
+
+Oric-Mon is the next Oric restoration after *Hopper* and *Light Cycle*, along with John Marshall's *The Ultra*
+([credits.md](credits.md)).

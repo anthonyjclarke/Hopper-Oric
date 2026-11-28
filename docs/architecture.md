@@ -36,7 +36,8 @@ loader and no second block. The build writes the same 14-byte TAP header from th
 | `$BB80`–`$BFDF` | Text screen, 40×28; row 27 is the status line                  |
 
 Most routines start on round addresses (`$0A00`, `$1000`, `$1400`, …), with `$FF`, `$55` or `$EA` filling the gaps. That
-suggests the game was assembled by hand into a monitor rather than with an assembler.
+comes from typing the game into Oric-Mon, my machine code monitor, rather than using an assembler
+([original_release.md](original_release.md#oric-mon)).
 
 ### Oric-1 ROM Locations
 

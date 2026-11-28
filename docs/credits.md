@@ -15,8 +15,7 @@ The game has a page on oric.org, the Oric software library: [Hopper](https://www
 
 ## The Reconstruction
 
-The source reconstruction, its annotations, the C64 port and these documents are my project; the details of who did
-what are still for me to fill in.
+The source reconstruction, its annotations, the C64 port and these documents are my personal project.
 
 ---
 
@@ -42,7 +41,8 @@ On 20 and 22 November 2026 I wrote what the two games had taught me back into th
 - the build gotchas;
 - the habits the two games share.
 
-The same pass added an Oric brief, written for *The Ultra* and *Oric-Mon*, which are next.
+The same pass added an Oric brief, written for *The Ultra* (written by a good friend of mine, John Marshall) and
+*Oric-Mon* (which I pulled together!), which are next.
 
 The toolkit's method borrows from two MIT-licensed projects:
 

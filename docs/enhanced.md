@@ -8,7 +8,7 @@ paper colours, the SID's filter and envelopes, and about 16 KB of free memory. T
 
 **Status.** These are built and checked in VICE: the version switch (V0), the attract screen (F1), the instructions page (F3), the
 multicolour lanes (V1), the sprite frog and fly (V2, V3), the smooth lanes (V4), the road markings (V6) and the
-Oric-style font (V7); their pictures are VICE captures. The rest (S1–S3, V5, F2) is still planned, and its pictures are
+Oric-style font (V7); their pictures are VICE captures. The rest (S1–S3, V5) is still planned, and its pictures are
 mock-ups drawn by `docs/tools/render_enhanced.py` from the real game screens ([How the Mock-Ups Are
 Made](#how-the-mock-ups-are-made)). Memory and cycle figures for the planned changes are estimates. This chapter covers the
 overview and the version switch, and [enhanced_graphics.md](enhanced_graphics.md), [enhanced_sound.md](enhanced_sound.md)
@@ -61,7 +61,6 @@ colours, the frog keeps its drawing, and the screens keep their text where the g
 | F1 | Enhanced attract screen       | Front end | Showcase | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
 | S2 | SID sound effects             | Sound     | Showcase | [enhanced_sound.md](enhanced_sound.md)       | Planned |
 | V4 | Smooth-scrolling lanes        | Graphics  | Stretch  | [enhanced_graphics.md](enhanced_graphics.md) | Built   |
-| F2 | Hi-scores saved to disk       | Front end | Stretch  | [enhanced_platform.md](enhanced_platform.md) | Planned |
 | S3 | Title tune                    | Sound     | Stretch  | [enhanced_sound.md](enhanced_sound.md)       | Planned |
 
 **Polish** is low risk and gives the biggest change in a still screenshot, and V1 turned out to need no game hooks.
@@ -72,7 +71,7 @@ and can be dropped.
 |:---------|:------------------|:-------------------|
 | Polish   | 3.4 KB            | None               |
 | Showcase | 2.9 KB            | None               |
-| Stretch  | 3.2 KB            | None               |
+| Stretch  | 2.8 KB            | None               |
 
 ---
 
@@ -118,8 +117,7 @@ scroller and a hopping frog ([enhanced_graphics.md](enhanced_graphics.md#f1--enh
 - A flip shows the page again from the start, with the attract timer: Classic's frog walk, or Enhanced's page.
 - The choice applies to everything after it: the game, the sheet-start signs, GAME OVER and the attract loop. It
   doesn't change in the middle of a game.
-- It lasts until power-off. RESTORE, the Oric's RESET, keeps it, as it keeps the hi-scores. With disk hi-scores (F2) it
-  is saved with them.
+- It lasts until power-off. RESTORE, the Oric's RESET, keeps it, as it keeps the hi-scores.
 - A fresh power-up starts in Enhanced (`Start` sets it; an open question below).
 
 ```mermaid
@@ -149,7 +147,7 @@ movement key, and in a game it does nothing. The details are in
 1. **Polish:** V0 first, so that every later change is built and checked against Classic from the start, then V7, V1
    and V6 (built) and S1 (planned).
 2. **Showcase:** V2, V3 and F1 (built), then V5 and S2 (planned).
-3. **Stretch:** V4 (built), F2 and S3, each optional.
+3. **Stretch:** V4 (built) and S3, each optional.
 
 Each step ends with Classic smoke captures that match today's and Enhanced captures added to the handbook.
 

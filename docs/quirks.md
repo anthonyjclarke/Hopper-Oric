@@ -36,8 +36,10 @@ locks up an NMOS 6502. It only runs if the frog row reaches 10, which the game s
 #$1A` instead, which is harmless, and skips the screen clear. The source names the target `BadTarget_296D`.
 
 **3.** If `key_state` reads `$28` while `NmiHandler` waits after RESET, it jumps to `DEV_MONITOR` (`$A800`). There's
-nothing there on a normal machine, so it was probably my development monitor. On the C64, `$A800` holds a character
-set, so the same keys crash it.
+nothing there on a normal machine. I wrote *Hopper* with Oric-Mon, the machine code monitor PSS published under my name
+([original_release.md](original_release.md#oric-mon)), and the exit was most likely my way back into it during
+development. Oric-Mon's tape ends at `$B1FF`, which fits a monitor sitting at `$A800`, but the start address isn't
+confirmed. On the C64, `$A800` holds a character set, so the same keys crash it.
 
 **4.** `HISCORES` is `$BA00`, in the alternate character set's RAM, which the game never shows. A RESET restarts at
 `WarmStart` without `ColdStart`'s copy, so the table survives it.
@@ -46,8 +48,8 @@ set, so the same keys crash it.
 `CheckHiScore` only use eight.
 
 **6.** A print-character routine (`L13A0`), a delay loop (`L1E80`) and three others are complete but never called, and
-there are `nop` runs where code was taken out (`$10D5`–`$10FC` in `MainLoop`). They suggest the game was edited in place
-in a monitor.
+there are `nop` runs where code was taken out (`$10D5`–`$10FC` in `MainLoop`). They're what you'd expect from editing the
+game in place in Oric-Mon.
 
 **7.** `MusicTick` moves to the next pair before reading it, so each tune starts on its second pair.
 
@@ -79,5 +81,5 @@ it would overwrite a row's paper attribute in column 1. The Oric build keeps thi
 ([remix.md](remix.md), change 1).
 
 **14.** NOPs pad the places where code was removed, and memory fill patterns (`$FF`, `$55`, `$EA`) sit between
-routines. Most routines start on round addresses, which suggests the game was assembled by hand with a monitor rather
-than a symbolic assembler. Every byte of it is in the source, so the build stays byte-identical.
+routines. Most routines start on round addresses, because I typed the game in with Oric-Mon rather than a symbolic
+assembler, so each routine went at an address I picked. Every byte of it is in the source, so the build stays byte-identical.

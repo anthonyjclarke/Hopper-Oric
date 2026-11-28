@@ -2,8 +2,8 @@
 
 This chapter is about how the C64 Enhanced version ([enhanced.md](enhanced.md)) fits into the platform layer
 ([platform_layer.md](platform_layer.md)): the version flag, hooks into the game (none), the changes to the raster
-interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. Everything here is built
-(`c64/src/platform.s`, `enhanced.s`, `sprites.s`) apart from the texture (V5), the SID changes and disk hi-scores (F2).
+interrupt and to `Present`, the sprite driver, memory, frame time and testing. Everything here is built
+(`c64/src/platform.s`, `enhanced.s`, `sprites.s`) apart from the texture (V5) and the SID changes.
 Names in this chapter that don't exist in `c64/src/` yet are listed under [Planned Names](#planned-names).
 
 ---
@@ -184,17 +184,7 @@ The BSS now ends at `$7F7D` (`c64/build/hopper.map`), leaving 130 bytes below `$
 `HIDATA`. Since V7, Enhanced data goes in the `HIGH` area at `$9000`–`$9FFF` (segment `HIDATA`, `c64/cfg/c64.cfg`). The
 one-file `.prg` therefore also covers `$8000`–`$8FFF` (the `GAP` area, zeros), which is harmless because the VIC screen
 and the multicolour set are written at run time. The `.prg` grew from 29 KB to 35 KB. The full set of changes needs
-about 9.5 KB, so it still fits with the packed picture's space in reserve.
-
----
-
-## F2 – Hi-Scores Saved to Disk
-
-**Planned.** The hi-score table at `$BA00` (`HISCORES`) would be saved to the disk the game loaded from after a new name
-is entered, and loaded at start-up if the file is there. Saving needs the KERNAL, which the port banks out, so it would run on a plain screen
-after name entry: interrupts masked, KERNAL in, `SAVE`, KERNAL out, the raster interrupt back. The version choice would be
-saved in the same file. With no disk drive (a `.prg` run from a cartridge or a tape image), it says nothing and carries
-on. About 0.4 KB.
+about 9.1 KB, so it still fits with the packed picture's space in reserve.
 
 ---
 
