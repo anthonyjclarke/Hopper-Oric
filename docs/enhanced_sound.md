@@ -1,6 +1,7 @@
 # Hopper – Enhanced Sound
 
-The sound changes in the C64 Enhanced version ([enhanced.md](enhanced.md)). All are planned; none is built yet.
+These are the sound changes I have planned for the C64 Enhanced version ([enhanced.md](enhanced.md)). None of them is
+built yet.
 The game's sound code is unchanged: it still writes AY registers through `AYWrite`, which the port replaces with
 `AyWriteC64` ([sound.md](sound.md#c64-playback)). Enhanced changes only how those writes become SID sound. In Classic
 the SID plays exactly as in the port.
@@ -10,7 +11,7 @@ the SID plays exactly as in the port.
 ## Today's Playback
 
 The port turns every AY channel into a SID voice with a 50% pulse (or noise), the AY volume as the sustain level and the
-shortest envelope. That is faithful but plain: the AY had no envelopes in this game and no filter, so neither does the
+shortest envelope. That's faithful but plain. The AY had no envelopes in this game and no filter, so neither does the
 port. The notes, lengths and timing are right, and Enhanced keeps them exactly.
 
 Which channel does what, read from the registers each routine writes:
@@ -63,8 +64,8 @@ The splash is the only new trigger. The platform can tell a drowning from a squa
 ## S3 – Title Tune
 
 **What changes.** A short SID tune for the home screen and attract loop. The original has no title music, so to stay
-close to the game it would be arranged from the sheet tune rather than written fresh. It is the least "subtle" option
-and an open question in [enhanced.md](enhanced.md#questions).
+close to the game I'd arrange it from the sheet tune rather than write one fresh. It's the least "subtle" option and
+an open question in [enhanced.md](enhanced.md#questions).
 
 **How it works.** A small player in the frame interrupt, running only on the home screen, credits and picture, and
 silent when a game starts. The tune and player go in `$9000`–`$9FFF`, which the CPU can use freely
@@ -76,6 +77,6 @@ silent when a game starts. The tune and player go in `$9000`–`$9FFF`, which th
 
 ## Checking by Ear
 
-Headless VICE has no sound, so `make c64-smoke` can't test any of this. Each change is checked by ear in VICE against
-the port's own playback, which itself is still waiting for its first check against the Oric in Auric
+Headless VICE has no sound, so `make c64-smoke` can't test any of this. I'll check each change by ear in VICE against
+the port's own playback, which is itself still waiting for its first check against the Oric in Auric
 ([porting.md](porting.md#status)). When recordings exist they go in `docs/sound/` and are embedded here.

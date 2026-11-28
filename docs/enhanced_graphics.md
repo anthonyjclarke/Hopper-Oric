@@ -1,8 +1,8 @@
 # Hopper – Enhanced Graphics
 
-Every visual change in the C64 Enhanced version ([enhanced.md](enhanced.md)), one section per change: what the player
-sees, what it is made from, and how the platform layer shows it. Each section says whether the change is built. Built
-changes are shown in VICE captures; the rest of the pictures are mock-ups drawn from the real game screens by
+This chapter has every visual change in the C64 Enhanced version ([enhanced.md](enhanced.md)), one section per change:
+what the player sees, what it's made from, and how the platform layer shows it. Each section says whether the change is built. Built
+changes are shown in VICE captures, and the rest of the pictures are mock-ups drawn from the real game screens by
 `docs/tools/render_enhanced.py` ([enhanced.md](enhanced.md#how-the-mock-ups-are-made)). Where the change touches the
 platform layer, the routines are described in [enhanced_platform.md](enhanced_platform.md).
 
@@ -10,11 +10,11 @@ platform layer, the routines are described in [enhanced_platform.md](enhanced_pl
 
 ## What Stays the Same
 
-The screen layout, the text and where it is printed, the lane colours, the frog's drawing and every shape the game
+The screen layout stays, along with the text and where it's printed, the lane colours, the frog's drawing and every shape the game
 defines in `udg_graphics`, `udg_symbols`, `frog_gfx`, `home_gfx`, `splat_gfx` and `turtle_frames`. The 28 Oric rows are
 still shown on 25, with the same rows hidden per screen ([porting.md](porting.md#decisions)). Text rows (the status
-line, menus, credits, signs) stay hires. Enhanced redraws the graphics characters, adds sprites over them, and adds
-colour to the background.
+line, menus, credits, signs) stay hires. Enhanced redraws the graphics characters, adds sprites over them and brings
+colour into the background.
 
 The close-up below shows several changes together: multicolour logs and cars, the river texture, tufts on the verge, and
 the road markings between the car lanes.
@@ -37,8 +37,8 @@ port draws them (6 pixels widened to 8), into a second character set at `CHARSET
 pairs. A pair with both pixels set takes the cell's colour RAM, which is the lane's ink. A pair with one pixel set takes
 `$D022`, the shade. In the top row of characters of each lane, the topmost full pair in each pixel column takes `$D023`,
 the highlight, so the top outline of a log or car catches the light and the grain inside it doesn't. The hedge
-(character `$7F`) is the one drawn glyph: the original's dither pattern turns into stripes in multicolour, so it becomes
-a leaf pattern. The conversion runs on the C64 (`McBuild`, `McChar`, about 30,000 cycles once per game), so there is no
+(character `$7F`) is the one glyph drawn specially. The original's dither pattern turns into stripes in multicolour, so
+it becomes a leaf pattern. The conversion runs on the C64 (`McBuild`, `McChar`, about 30,000 cycles once per game), so there is no
 generated data to keep in step with the game.
 
 ![The lanes as the port draws them, beside the multicolour version and the three colours each uses (mock-up tool)](images/enhanced/lanes.png)
@@ -55,7 +55,7 @@ generated data to keep in step with the game.
 | Cars, yellow (23–24) | yellow           | grey            | white               |
 
 The colours are `LaneShade` and `LaneLight` in `enhanced.s`, per Oric row. A multicolour cell's colour RAM can only take
-colours 0–7, which are exactly the Oric's eight inks, so every lane keeps its own ink. The black logs therefore stay
+colours 0–7, which are exactly the Oric's eight inks, so every lane keeps its own ink. So the black logs stay
 black and get brown grain (an earlier plan made them brown, which colour RAM can't show). All three road lanes share
 grey and white, so the raster interrupt's writes never change colours between two vehicles' rows.
 
@@ -67,7 +67,7 @@ shade and highlight (`rowMc1`, `rowMc2`). The raster interrupt already sets `$D0
 and now sets `$D022` and `$D023` too.
 
 **Keeping up with the game.** The game rewrites three groups of glyphs while it plays. The platform converts them again
-when they change, so no game byte is patched. The two hooks the plan expected aren't needed:
+when they change, so no game byte is patched, and the two hooks the plan expected turned out not to be needed:
 
 | Glyphs                 | Rewritten by                         | Noticed by                          |
 |:-----------------------|:-------------------------------------|:------------------------------------|
@@ -90,7 +90,7 @@ paper.
 
 **Built** (`c64/src/sprites.s`), checked in VICE. The frog is a sprite: a multicolour body (green, light green, a yellow
 top edge) with a hires black outline sprite round it, so it stands out on the green verge and the yellow median. A hop
-glides to its new place over a few frames on a low arc instead of jumping two columns at once. On the river the frog
+glides to its new place over a few frames on a low arc, where the original jumps two columns at once. On the river the frog
 rides its log or turtle with the lane's fine scroll (V4). Death shows the original splat as a sprite.
 
 ![VICE: Enhanced play, the sprite frog on the start verge](images/screens/enh-play.png)
@@ -104,7 +104,7 @@ rides its log or turtle with the lane's fine scroll (V4). Death shows the origin
 **How it is made.** `tools/frog_sprites.py` (`make c64-sprites`) reads the four directions from `frog_gfx` and the
 splat from `splat_gfx` on the tape, widens them to 8 pixels a character as the port shows them, converts them to
 multicolour as in V1 and draws the outline round them, writing `c64/src/sprites.inc`. Five frames of two sprites, ten
-blocks from `$8400`. The mock-up's stretched hop frame is left out: the arc alone reads well at this size.
+blocks from `$8400`. I left out the mock-up's stretched hop frame, because the arc alone reads well at this size.
 
 **How it is shown.** The game still writes the frog's characters (`$3A`–`$3D`) into the screen and reads the cells under
 them (`under_frog`), so collision is untouched. Only their glyphs are blank: `SetFrogGfx` (patched at its start,
@@ -125,8 +125,8 @@ the home row), so no multiplexing is needed.
 ## V3 – Fly Sprite
 
 **Built** (`c64/src/sprites.s`), checked in VICE on sheet 3. The fly in a home flaps its wings (two frames, every 4
-frames) and bobs by a pixel (every 8). It is two hires sprites, a black body and light grey wings, from the mock-up's
-drawing; the mock-up's red eyes are left out, since each hires sprite has one colour. `SprTarget` shows it where the
+frames) and bobs by a pixel (every 8). It's two hires sprites, a black body and light grey wings, from the mock-up's
+drawing. The mock-up's red eyes are left out, since each hires sprite has one colour. `SprTarget` shows it where the
 game has drawn its first character (`$7C`) at `fly_ptr`; the game's `fly_on` doubles as a copy pointer elsewhere, so the
 screen cell is the test. The fly's characters stay on the screen for the game to read, with their glyphs blank
 (`McBuild` clears them).
@@ -135,7 +135,7 @@ screen cell is the test. The fly's characters stay on the screen for the game to
 
 ## V5 – Water and Grass Texture
 
-**Planned** (Showcase tier), not built yet: the pictures here are mock-ups.
+**Planned** (Showcase tier) and not built yet, so the pictures here are mock-ups.
 
 **What changes.** The river's empty water shows sparse light-blue ripples. The verges (the yellow median and the green
 start) show small tufts. The ripples belong to the lane they are in, so they drift with the logs and turtles, and the
@@ -154,7 +154,7 @@ translation costs about 4,000 cycles a frame, inside the time the Oric spent wai
 
 **Built**, checked in VICE. The Oric drew dashed lines between the car lanes on rows 19 and 22. The port hides those
 rows to fit 28 rows on 25, so the three car lanes sit together. Enhanced draws a one-pixel grey line at each boundary
-instead, without spending a row. It is solid, not dashed: a raster colour change covers the whole line.
+instead, without spending a row. The line is solid, because a raster colour change covers the whole line.
 
 **How it is shown.** The row interrupts for Oric rows 20 and 23 start the row with `$D021` grey and turn it back after
 its first raster line, the lane boundary ([enhanced_platform.md](enhanced_platform.md#raster-interrupt)). Only the
@@ -169,7 +169,7 @@ V1 shows them.
 **Built** (`W6` layout), checked in VICE. The port shows text in the C64 font, because the Oric ROM font isn't on the
 tape ([porting.md](porting.md#known-differences)). Enhanced uses a font drawn in the manner of the Oric's text: a 5 × 7
 design with single-pixel strokes in a 6-pixel cell, the left column as the gap, and lower case with descenders in row 7.
-It is drawn for this project, not copied from the Oric ROM. It covers every screen's text: the menus, the redefine
+It was drawn for this project; it isn't copied from the Oric ROM. It covers every screen's text: the menus, the redefine
 prompts, the credits, the hi-score table and title, the signs and the status line.
 
 ![VICE: the controls menu and redefine prompts in Enhanced](images/screens/redefine.png)
@@ -181,7 +181,7 @@ they can be edited in any editor. `make c64-font` writes `c64/src/oricfont.inc` 
 
 ![The C64 font, and the Oric-style font in its two layouts (3×)](images/enhanced/font-sheet.png)
 
-**Layout.** The 6-pixel cell has to fill the C64's 8 pixels. Two ways were drawn for review, and `W6` was chosen:
+**Layout.** The 6-pixel cell has to fill the C64's 8 pixels. Two ways were drawn for review, and I chose `W6`:
 
 | Layout   | How                                                     | Looks                                          |
 |:---------|:--------------------------------------------------------|:-----------------------------------------------|
@@ -191,8 +191,8 @@ they can be edited in any editor. `make c64-font` writes `c64/src/oricfont.inc` 
 ![Mock-up: the menu, credits and hi-score screens in each font](images/enhanced/font-screens.png)
 
 **Readability.** Single-pixel strokes in the C64's dark blue and red are harder to read on black than the C64 font's
-two-pixel strokes (the blue instruction lines on the credits). This is accepted for now, as the Oric looked: the
-alternatives, if it proves a problem on a real screen, are to thicken the vertical strokes for those inks only or to
+two-pixel strokes (the blue instruction lines on the credits). I'm accepting that for now, as it's how the Oric looked. If it proves a problem on a real screen, the
+alternatives are to thicken the vertical strokes for those inks only or to
 keep the C64 font for blue and red text.
 
 **How it is shown.** `BuildFont` builds the C64 font at start-up as before, then `KeepC64Font` copies it to
@@ -213,7 +213,7 @@ the C64 copy (768 bytes) at `$C800`–`$CAFF` in bank 3 RAM ([enhanced_platform.
 hopping frog: the title framed with the PSS line and the author, a CONTROLS panel with the four chosen keys as keycaps,
 P, RUN/STOP and the joystick, a HOW TO PLAY panel with the aim and the points, and below them the 1 (start), 3 (new
 keys) and F1 (Classic) buttons and the PSS address on one line. The title frog and the jingle are the original's
-(`CreditsEnd`). Of three mock-ups (one column, a key cross, panels) layout C was chosen.
+(`CreditsEnd`). Of three mock-ups (one column, a key cross, panels), I chose layout C.
 
 ![VICE: the Enhanced instructions page](images/screens/instructions.png)
 
@@ -242,8 +242,8 @@ prompts stay where the game prints them; Classic and the name-entry table are un
 
 ![VICE: the attract screen in Enhanced](images/screens/enh-hiscores.png)
 
-**How it is shown.** No raster changes: the row interrupt has no cycles to spare, so the mock-up's colour per raster
-line became a colour per letter. `TitleTickC64` calls `AttractStart` on the screen's first tick: it draws the lines in
+**How it is shown.** There are no raster changes here. The row interrupt has no cycles to spare, so the mock-up's colour
+per raster line became a colour per letter. `TitleTickC64` calls `AttractStart` on the screen's first tick: it draws the lines in
 the page's borrowed `~` glyph (rows 2, 23 and 25; `LendPageGlyphs`), sets up the V2 frog sprites and sets `attractOn`.
 `Present` parses the title rows first; right after row 1 (`ParseRowAtt`) `AttractTitle` writes the cycle into their
 colour RAM, (`zTick` / 2) mod 12 rolling along, and the round-robin parse skips them while `attractOn` is set. At the
@@ -265,7 +265,7 @@ lane row is shifted 0–7 pixels with the `$D016` fine scroll, so the step lands
 
 ![VICE: the river in Enhanced over 32 frames](images/screens/enh-smooth.gif)
 
-**How it is shown.** The study turned out simple: each pass of `MainLoop` counts every lane's `lane_timer` up to its
+**How it is shown.** This turned out to be simple: each pass of `MainLoop` counts every lane's `lane_timer` up to its
 speed in `lane_speeds`, then steps the lane and sets the timer to 0. So the offset is the timer's share of the wait,
 round(timer × 8 / speed), from a 256-byte table (`FineTab`, speed × 16 + timer); the sheet speed-ups need nothing
 extra, since they only lower `lane_speeds`. `XSCROLL` only shifts right, so a lane that moves left counts down from 7

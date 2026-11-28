@@ -7,7 +7,7 @@ screenshots into one offline page. Images, styling, the reader's controls and th
 it opens in a browser with no network access.
 
 **Edit the Markdown, never the generated HTML.** Each chapter links to its Markdown source, and links between included
-documents become links within the page. Links to other repository files stay relative, so they work only when the
+documents become links within the page. Links to other repository files stay relative, so they only work when the
 checkout sits next to the HTML. The handbook has a contents sidebar, chapter search, image enlargement and print
 support.
 
@@ -15,9 +15,9 @@ support.
 
 The sidebar's **Switch to the C64 font** button sets the page in Style's [C64
 TrueType](https://style64.org/c64-truetype) fonts. Their [licence](https://style64.org/c64-truetype/license) allows
-embedding them unmodified with `@font-face` but not offering the files for download, so `docs/tools/fonts/` ignores
-everything but its own `.gitignore`. The option is included when `C64_Pro-STYLE.woff2` and `C64_Pro_Mono-STYLE.woff2`
-from the package's `fonts/` folder are copied, unmodified, into `docs/tools/fonts/`. Without them the button is left out
+embedding them unmodified with `@font-face` but doesn't allow offering the files for download, so `docs/tools/fonts/`
+ignores everything but its own `.gitignore`. The option is included when `C64_Pro-STYLE.woff2` and `C64_Pro_Mono-STYLE.woff2`
+from the package's `fonts/` folder are copied, unmodified, into `docs/tools/fonts/`. Without them the button is left out,
 and `just docs-check` reports the handbook stale, because the committed handbook is generated with them. The paths and
 labels are `retroFont` in `docs/handbook.json`.
 
@@ -25,7 +25,7 @@ labels are `retroFont` in `docs/handbook.json`.
 
 ## Regeneration
 
-The steps run from the repository root, in this order. The figure tools need Pillow, which on this Mac is in Homebrew's
+The steps run from the repository root, in this order. The figure tools need Pillow, which on my Mac is in Homebrew's
 `/opt/homebrew/bin/python3.14`.
 
 | Step                           | Command                                  | Needs            | Writes                     |
@@ -40,13 +40,13 @@ The steps run from the repository root, in this order. The figure tools need Pil
 | The HTML                       | `node docs/tools/build_docs.mjs`         | Node.js 20+      | `docs/HOPPER.html`         |
 | The HTML currency check        | `node docs/tools/build_docs.mjs --check` | Node.js 20+      | –                          |
 
-The `just` recipes wrap them:
+The `just` recipes wrap these steps:
 
 ```bash
 just docs
 ```
 
-`just docs` runs every step but the glitch check. `just docs-html` only regenerates the HTML from the current Markdown
+`just docs` runs every step except the glitch check. `just docs-html` only regenerates the HTML from the current Markdown
 and images, `just docs-check` fails if a chapter names a label that is not in the source or the saved HTML is stale, and
 `just docs-watch` regenerates it whenever a source changes. `just docs-graphics` and `just docs-screens` run only the
 figure or capture steps. The recipes use `DOCS_PYTHON`, else Homebrew's `python3.14`, else `python3`.
@@ -68,7 +68,7 @@ figure or capture steps. The recipes use `DOCS_PYTHON`, else Homebrew's `python3
 - **Oric appendix figures.** `render_oric.py` draws the palette, a HIRES line of serial attributes and the AY's envelope
   shapes for `oric_specs.md`. It reads nothing from the game, so the file is the same in every Oric reconstruction.
 - **Oric appendix screenshot.** `oric-basic-hires.png` is a capture of `oric_specs.md`'s HIRES BASIC example running in
-  the Auric emulator on the Atmos ROM; it is not generated, and is captured again by hand if the example changes.
+  the Auric emulator on the Atmos ROM. It isn't generated, so it's captured again by hand if the example changes.
 - **C64 Enhanced mock-ups.** `render_enhanced.py` draws the mock-ups in the C64 Enhanced chapters: the screens are the
   game's own (drawn on the 6502 core, as above), shown the way the port shows them (rows hidden, glyphs widened to 8
   pixels, the C64 font, the Pepto palette), with each change applied as the chapters describe it. It also writes the
@@ -87,7 +87,7 @@ figure or capture steps. The recipes use `DOCS_PYTHON`, else Homebrew's `python3
 
 ## Chapter Selection and Presentation
 
-`docs/handbook.json` sets the title, the reading order and the groups. A new Markdown file appears only once it is
+`docs/handbook.json` sets the title, the reading order and the groups. A new Markdown file only appears once it's
 listed there. `docs/tools/build_docs.mjs` does the conversion: it namespaces the headings by document, rewrites the
 links, embeds local images as data URIs, and fails on a broken link, a missing section or a remote image. Raw HTML in
 the Markdown is escaped. The layout and controls are `docs/tools/handbook/handbook.html`, `handbook.css` and

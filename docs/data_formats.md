@@ -1,14 +1,14 @@
 # Hopper – Data Formats
 
-Every table the game reads, with its label and Oric address, read from `src/hopper.s`. The C64 port keeps them all at
-the same addresses; the few it changes are marked **C64**.
+This is every table the game reads, with its label and Oric address, taken from `src/hopper.s`. The C64 port keeps them
+all at the same addresses, and the few it changes are marked **C64**.
 
 ---
 
 ## Characters
 
-Each character is 8 bytes, top row first; bits 5–0 are the six pixels, bit 5 on the left (bits 7–6 are unused in the
-graphics). **C64:** every glyph byte is widened to 8 pixels at assembly time by `W6`, which doubles the two middle
+Each character is 8 bytes, top row first. Bits 5–0 are the six pixels, with bit 5 on the left (bits 7–6 are unused in
+the graphics). **C64:** every glyph byte is widened to 8 pixels at assembly time by `W6`, which doubles the two middle
 pixels: `W6(v) = ((v & $38) << 2) | ((v & $0C) << 1) | (v & $07)`.
 
 | Label           | Address | Size             | Copied to                           | By               |
@@ -20,7 +20,7 @@ pixels: `W6(v) = ((v & $38) << 2) | ((v & $0C) << 1) | (v & $07)`.
 | `turtle_frames` | `$1900` | 7 × 6 characters | `$6E`–`$73`                         | `SetTurtleFrame` |
 | `splat_gfx`     | `$2207` | 4 characters     | `$3A`–`$3D`                         | `SetSplatGfx`    |
 
-The frog's four characters sit at screen offsets `frog_offsets` (0, 1, 40, 41): top-left, top-right, bottom-left,
+The frog's four characters sit at screen offsets `frog_offsets` (0, 1, 40, 41): top-left, top-right, bottom-left and
 bottom-right. The `udg_graphics` copy runs on for 512 bytes into the tables after it, which land harmlessly in
 characters past `$7F`.
 
@@ -39,12 +39,12 @@ characters past `$7F`.
 | `game_over_text`  | `$1AB0` | GAME OVER, double height                                                                |
 
 The row colours give the river a blue paper (rows 0–14), the middle bank yellow (15–16), the road black (17–24) with
-white markings on rows 19 and 22, the start bank green (25–26) and the status line white (27). Inks pick out the lanes:
-red turtles (7–8), yellow logs (10–11), red logs (13–14), and the vehicles' colours on the road.
+white markings on rows 19 and 22, the start bank green (25–26) and the status line white (27). The inks pick out the
+lanes: red turtles (7–8), yellow logs (10–11), red logs (13–14), and the vehicles' colours on the road.
 
-The status line is written from column 2 of row 27. Its fixed fields are found by offset: `SCORE_DIGITS` (six digits at
+The status line is written from column 2 of row 27, and its fixed fields are found by offset: `SCORE_DIGITS` (six digits at
 column 8, then a fixed `0`), `TIME_DIGITS` (column 21), `LIVES_DIGIT` (column 30) and `SHEET_DIGITS` (column 38). Scores
-are kept as ASCII digits on the screen and `AddScore` adds to them in place, carrying left.
+are kept as ASCII digits on the screen, and `AddScore` adds to them in place, carrying left.
 
 ---
 
@@ -56,10 +56,10 @@ are kept as ASCII digits on the screen and `AddScore` adds to them in place, car
 | `lane_speeds`      | `$09C0` | The working copy; lowered as sheets are cleared                |
 | `lane_timer`       | `$40`   | Seven counters, one per lane                                   |
 
-Lane 0 is row 23 and lane 6 row 4: 0–2 are the road (rows 23, 20, 17), 3–6 the river (rows 13, 10, 7, 4). The road lanes
+Lane 0 is row 23 and lane 6 is row 4, so 0–2 are the road (rows 23, 20, 17), 3–6 the river (rows 13, 10, 7, 4). The road lanes
 and row 4 are fed by spawners (`SpawnRow23`, `SpawnRow20`, `SpawnRow17`, `SpawnRow4`), each with four bytes in page 4:
 the next character of the object to place (`r23_state`, 0 = a gap), a repeat count for its middle part (`r23_len`), a
-first-gap flag and a gap countdown, with minimum gaps in `r17_gap_min` … The other river lanes only scroll what
+first-gap flag and a gap countdown, with minimum gaps in `r17_gap_min` … The other river lanes just scroll what
 `lane_init` put there, wrapping round.
 
 ---
@@ -74,8 +74,8 @@ first-gap flag and a gap countdown, with minimum gaps in `r17_gap_min` … The o
 | `keys_set1` | `$16C0` | 15 bytes copied over the three tables for control choice 1      |
 | `keys_set2` | `$16D0` | The same for choice 2                                           |
 
-The order matters: the third key is **down** (`$08`) and the fourth **up** (`$04`), whatever the comment in the original
-listing suggested; `KeysToDir` reads them that way. **C64:** the rows hold the CIA1 port A column select and the columns
+The order matters. The third key is **down** (`$08`) and the fourth **up** (`$04`), whatever the comment in the original
+listing suggested, and `KeysToDir` reads them that way. **C64:** the rows hold the CIA1 port A column select and the columns
 the port B row mask; choice 1 is Z X K M, and choice 2 is filled by `RedefineKeys` (key bits included, since the Oric's
 choice 2 orders its keys up, down, left, right), which also writes the four key names into the immediate operands
 `key_name_left` … that `ControlsMenu` stores into the instructions.
@@ -91,8 +91,8 @@ choice 2 orders its keys up, down, left, right), which also writes the four key 
 | `credits_path`  | `$26C8` | The hop direction for each step (2 down, 3 left, 4 right), `$FF` = end      |
 | `menu_prompt`   | `$1CB0` | "PRESS [1] FOR A NEW GAME" / "[2] FOR INSTRUCTONS" (sic)                    |
 
-`CreditsIntro` moves a frog along `credits_path` and leaves four characters of `credits_text` behind it at each hop, two
-on the upper row and two on the lower, so the text is stored in pairs of pairs. `ControlsMenu` writes the chosen key
+`CreditsIntro` moves a frog along `credits_path` and leaves four characters of `credits_text` behind it at each hop,
+two on the upper row and two on the lower, so the text is stored in pairs of pairs. `ControlsMenu` writes the chosen key
 names into it at fixed offsets.
 
 ---
@@ -105,8 +105,8 @@ names into it at fixed offsets.
 | `HISCORES`     | `$BA00` | Eight entries of 28 bytes                                                 |
 | `hiscore_inks` | `$0800` | The ink of each table row                                                 |
 
-An entry is an 8-character score (right-aligned ASCII digits, spaces in front), then the name, ending `$0D`, padded with
-spaces to 28 bytes. `CheckHiScore` compares a score digit by digit with each entry, shifts the lower entries down and
+An entry is an 8-character score (right-aligned ASCII digits with spaces in front), then the name, ending `$0D` and
+padded with spaces to 28 bytes. `CheckHiScore` compares a score digit by digit with each entry, shifts the lower entries down and
 reads a name from `ROM_KEY`. The default table holds a ninth entry (200) that is copied but never shown
 ([quirks.md](quirks.md)).
 

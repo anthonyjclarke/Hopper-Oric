@@ -1,9 +1,9 @@
 # Hopper – Enhanced Platform Layer
 
-How the C64 Enhanced version ([enhanced.md](enhanced.md)) fits into the platform layer
+This chapter is about how the C64 Enhanced version ([enhanced.md](enhanced.md)) fits into the platform layer
 ([platform_layer.md](platform_layer.md)): the version flag, hooks into the game (none), the changes to the raster
 interrupt and to `Present`, the sprite driver, memory, frame time, disk hi-scores and testing. Everything here is built
-(`c64/src/platform.s`, `enhanced.s`, `sprites.s`) except the texture (V5), the SID changes and disk hi-scores (F2).
+(`c64/src/platform.s`, `enhanced.s`, `sprites.s`) apart from the texture (V5), the SID changes and disk hi-scores (F2).
 Names in this chapter that don't exist in `c64/src/` yet are listed under [Planned Names](#planned-names).
 
 ---
@@ -13,7 +13,7 @@ Names in this chapter that don't exist in `c64/src/` yet are listed under [Plann
 **Built.** One zero-page byte, `zEnhanced` (`$90`, in the platform's area): 0 for Classic, `$FF` for Enhanced. `Start`
 sets it to `$FF`, so a power-up is in Enhanced. Nothing else writes it but the switch: RESTORE goes through the Oric's
 RESET path (`NmiHandler`, `WarmStart`), which doesn't touch the platform's zero page, so the choice survives it. Every
-enhancement tests it, and with it clear the platform runs exactly Classic's code paths. There is one `.prg` with both
+enhancement tests it, and with it clear the platform runs exactly Classic's code paths. There's one `.prg` with both
 looks loaded all the time, so flipping costs nothing but a redraw.
 
 The switch is on the instructions page only. `ScanRomKey` reports F1 as `KEY_F1` (`$01`) + `$80` in `ROM_KEY`, like
@@ -40,8 +40,8 @@ and `credits` and `credits-done` the Classic page that follows. The game it then
 ## Hooks
 
 **None.** The plan expected two hooks, in `SetTurtleFrame` and `SetFrogGfx`, so that the multicolour set could
-follow the glyphs the game rewrites. The frog turned out to be rewritten in six places (four directions, the splat and
-the frog in a home), with no spare bytes in most of them. So the platform notices the changes itself instead, in
+follow the glyphs the game rewrites. Then the frog turned out to be rewritten in six places (four directions, the splat
+and the frog in a home), with no spare bytes in most of them. So the platform spots the changes itself instead, in
 `McDynamic` ([enhanced_graphics.md](enhanced_graphics.md#v1--multicolour-lane-graphics)), and `make c64-diff` shows no
 game bytes added for Enhanced.
 
@@ -61,7 +61,7 @@ new stores land before the next row's first pixel line.
 
 `zMcPlay` is `$FF` only while Enhanced is chosen and the play screen's row map is set (`SetRowMap`). On every other
 screen, and in Classic, the interrupt skips the writes (about 5 cycles a row), so menus, credits and the attract loop
-run at Classic speed in both versions. That matters because the credits' short waits already overrun, and any extra cost
+run at Classic speed in both versions. That matters, because the credits' short waits already overrun, and any extra cost
 there moves the whole attract loop.
 
 **Built (V6):** the road markings need no extra interrupts. In the interrupts for C64 rows 18 and 20 (`MarkRow`, Oric
@@ -71,11 +71,10 @@ and the interrupt stores `rowIrqBg`, not `rowPaper`, at the row boundary, so the
 Straight after the boundary stores it puts the row's real paper back as the row's second line starts. The first line
 of a text row is a badline, which stalls the CPU to near the line's end, and the frog's sprites take more cycles right
 after it, so counting cycles from the boundary left the paper anywhere up to 8 characters into the second line when the
-frog was near. The interrupt instead waits for the raster to pass the badline (`cpx $D012`, `bcs`), with the loop
+frog was near. So the interrupt now waits for the raster to pass the badline (`cpx $D012`, `bcs`), with the loop
 already running before the stall: the line and the paper are immediates in that code, which `IrqArm` writes at the end
 of the row interrupt above (`IrqLine` 0 for a row without a marking, which skips the wait). The line is the lane's top
-pixel line, which the vehicles leave nearly empty, so each lane's traffic sits between
-two lines. (The first version waited 25 and then 64 cycles after the boundary; once V4 and V7 had added code ahead of
+pixel line, which the vehicles leave nearly empty, so each lane's traffic sits between two lines. (The first version waited 25 and then 64 cycles after the boundary; once V4 and V7 had added code ahead of
 it, the grey had drifted to the lane's third line, across the tops of the cars.) About 30 cycles a frame.
 
 **Built (V4):** every row interrupt also writes `$D016` from `rowCtl2` (multicolour and fine scroll). `SetRowMap` fills
@@ -94,7 +93,7 @@ next. A store must start by cycle 8 of the next line: one that starts later read
 end. One cycle earlier and the first store lands before the row above's last line ends (a changed paper shows in its
 last 2 pixels on the menus), so the interrupt saves its registers in zero page (`zIrqA`, `zIrqX`, and `zIrqY` with
 an absolute store to give one cycle back) instead of pushing them, which put the stores 3 cycles earlier than before.
-`IRQ_PAD` `nop`s, for experiments, would move them 2 cycles later each; it is 0.
+`IRQ_PAD` `nop`s, there for experiments, would move them 2 cycles later each; it's set to 0.
 `$D022`/`$D023` are written after the stall, too late for a row's first line, so a row without multicolour cells (the
 water between river lanes, the verges) writes the next row's colours as well, and the lane tops no longer flicker.
 
@@ -191,9 +190,9 @@ about 9.5 KB, so it still fits with the packed picture's space in reserve.
 
 ## F2 – Hi-Scores Saved to Disk
 
-The hi-score table at `$BA00` (`HISCORES`) is saved to the disk the game loaded from after a new name is entered, and
-loaded at start-up if the file is there. Saving needs the KERNAL, which the port banks out, so it runs on a plain screen
-after name entry: interrupts masked, KERNAL in, `SAVE`, KERNAL out, the raster interrupt back. The version choice is
+**Planned.** The hi-score table at `$BA00` (`HISCORES`) would be saved to the disk the game loaded from after a new name
+is entered, and loaded at start-up if the file is there. Saving needs the KERNAL, which the port banks out, so it would run on a plain screen
+after name entry: interrupts masked, KERNAL in, `SAVE`, KERNAL out, the raster interrupt back. The version choice would be
 saved in the same file. With no disk drive (a `.prg` run from a cartridge or a tape image), it says nothing and carries
 on. About 0.4 KB.
 
@@ -201,7 +200,7 @@ on. About 0.4 KB.
 
 ## Building and Testing
 
-There is one build, `make c64`, and the `.prg` holds both versions. `make c64-smoke` builds two scripted test programs
+There's one build, `make c64`, and the `.prg` holds both versions. `make c64-smoke` builds two scripted test programs
 from the same key script (`c64/src/autotest.s`):
 
 | Build                      | Script                                        | Captures                            |
@@ -215,7 +214,7 @@ the frog's columns clear in both rows of the lane, with 8 more columns towards t
 side, unless traffic is within 4 columns of where the frog stands, when its own columns are enough; on the river it
 wants a log or turtle under the frog's columns and one either side. It stops on the top river lane and rides it. So the
 frog crosses the road, rides the turtles and logs and is carried off the end of the top log, and the captures cover
-hops, riding and the edge death without key timings that a few cycles would break. The test code sits in `HIDATA`, out
+hops, riding and the edge death without relying on key timings that a few cycles would break. The test code sits in `HIDATA`, out
 of main memory.
 
 `make c64-flicker` (`tools/c64_glitch.py`) captures consecutive frames of both test builds and fails on
@@ -227,9 +226,8 @@ the faults it looks for: the menu check fails with the row interrupt's stores la
 the title sync off, the marking check with the paper put back a line late.
 
 `tools/c64_screens.py` picks the program by the capture's name (`enh-*`). Classic captures are compared by eye with the
-previous build's: the few cycles Enhanced adds to shared paths can move a capture by a frame. Still to check by hand in
-VICE: real F1 and joystick presses, RUN/STOP
-in a game, RESTORE, a frog home and a full sheet in Enhanced, and NTSC.
+previous build's: the few cycles Enhanced adds to shared paths can move a capture by a frame. I still need to check these by hand in VICE: real F1 and joystick presses, RUN/STOP in a game, RESTORE, a frog home and
+a full sheet in Enhanced, and NTSC.
 
 The key script leaves at least 25 frames between keys, and 80 between the sound menu and the controls menu: keys
 injected at fixed frames are lost if they arrive before the screen that wants them, and the old 15-frame gaps broke as
@@ -240,7 +238,7 @@ the Enhanced build, whose attract loop runs ahead (its page comes at once), star
 
 ## Planned Names
 
-Names this section uses that don't exist yet. They are in `docs/tools/doc_names_ignore.txt` until the code exists, and
+These are the names this chapter uses that don't exist yet. They are in `docs/tools/doc_names_ignore.txt` until the code exists, and
 are removed from there as each one is written.
 
 | Name            | Kind    | For                                        |

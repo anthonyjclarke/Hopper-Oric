@@ -124,7 +124,7 @@
 
 ### Changed
 
-- `credits.md`: a Restoration Toolkit section on Anthony's private *Old Code Restoration* toolkit, how it grew from
+- `credits.md`: a Restoration Toolkit section on my private *Old Code Restoration* toolkit, how it grew from
   *Dork's Dilemma* to the Oric games, and its credits: retro-archaeology-skills, MOSaic, OpenCBM, ZoomFloppy, cc65,
   VICE, Auric and Marked.
 - Links to the *Light Cycle* repository (github.com/anthonyjclarke/Light-Cycle-Oric) where the game is named: the
@@ -208,7 +208,7 @@
   `$D018` store, spread over 10 cycles with `$D016` and `$D021` since V4, could land after that badline started. The
   three values are now loaded into registers and stored back to back after `IRQ_PAD` nops, set to 1 from VICE
   measurements (0–4 clean on the menu, 5 late; only 0–1 clean with the frog's sprites on a row boundary; later 0). Found
-  by decoding the user's VICE recordings and reproduced on headless captures of the sound menu (8 glitches in 46 frames,
+  by decoding my VICE recordings and reproduced on headless captures of the sound menu (8 glitches in 46 frames,
   now 0).
 - C64 Enhanced log and turtle tops flickered: `$D022`/`$D023` land after the badline stall, so a lane's first line
   sometimes took the colours of the row above. A row without multicolour cells now loads the next row's colours.

@@ -1,5 +1,8 @@
 # Hopper – Source Guide and Toolchain
 
+This chapter is the map of the repository: where everything lives, what the builds need, what each `make` target does
+and the rules that keep the source byte-identical to the tape.
+
 ---
 
 ## Repository Layout
@@ -54,10 +57,10 @@
 | `make c64-sprites` | The Enhanced frog and fly sprites (`c64/src/sprites.inc`, from the Oric labels)          |
 | `make clean`       | Removes `build/` (the Oric build)                                                        |
 
-Auric is expected at `~/PlatformIO/Projects/Auric` (`build/src/auric`); `make run AURIC_DIR=/path/to/Auric` points
-elsewhere. The game runs in **Oric-1 mode**: it uses Oric-1 ROM locations, which the Atmos ROM keeps elsewhere
-([architecture.md](architecture.md#oric-1-rom-locations)); the ROM files are in [oric_specs.md](oric_specs.md). In VS
-Code, **Terminal → Run Build Task** (⇧⌘B) builds, and the verify and Auric tasks are under **Terminal → Run Task**
+Auric is expected at `~/PlatformIO/Projects/Auric` (`build/src/auric`), and `make run AURIC_DIR=/path/to/Auric` points
+elsewhere. The game runs in **Oric-1 mode** because it uses Oric-1 ROM locations, which the Atmos ROM keeps elsewhere
+([architecture.md](architecture.md#oric-1-rom-locations)). The ROM files are covered in [oric_specs.md](oric_specs.md).
+In VS Code, **Terminal → Run Build Task** (⇧⌘B) builds, and the verify and Auric tasks are under **Terminal → Run Task**
 (`.vscode/`, with the recommended *ca65* extension for highlighting).
 
 ---
@@ -65,9 +68,10 @@ Code, **Terminal → Run Build Task** (⇧⌘B) builds, and the verify and Auric
 ## How the Source Was Reconstructed
 
 `tools/gen_source.py` traces the code by recursive descent from its entry points: the tape entry `$0500`, the RESET
-handler `$0560` that the game installs itself, and five routines nothing calls. Whatever is not reached as code is data.
-`tools/annotations.py` holds the names, comments and data layouts; character graphics are printed as pixel art in the
-comments. `src/hopper.s` is now the master and is edited by hand; `make regen` would overwrite it.
+handler `$0560` that the game installs itself, and five routines nothing calls. Whatever isn't reached as code is
+treated as data. `tools/annotations.py` holds the names, comments and data layouts, and the character graphics are
+printed as pixel art in the comments. `src/hopper.s` is now the master and is edited by hand, so `make regen` would
+overwrite those edits.
 
 ---
 

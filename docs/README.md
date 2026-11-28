@@ -1,12 +1,13 @@
 # Hopper – Documentation
 
-A Commodore 64 version of *Hopper*, the *Frogger*-style game for the Oric-1 written by A.J. Clarke and published on tape
-by PSS in 1983. The C64 version runs the Oric game code, every byte at its Oric address, on a small platform layer, in
-two looks, Classic and Enhanced. The Oric original is kept alongside it: the tape, `original/HOPPER.TAP`, and its full
-commented ca65 source in `src/`, which `make verify` assembles back into a byte-identical tape for any Oric emulator
-(`make run` starts it in Auric). The [project README](../README.md) introduces the game.
+These chapters cover the Commodore 64 version of *Hopper*, the *Frogger*-style game I wrote for the Oric-1 and PSS
+published on tape in 1983. The C64 version runs the Oric game code, every byte at its Oric address, on a small platform
+layer, and comes in two looks, Classic and Enhanced. The Oric original is kept alongside it: the tape,
+`original/HOPPER.TAP`, and its full commented ca65 source in `src/`, which `make verify` assembles back into a
+byte-identical tape for any Oric emulator (`make run` starts it in Auric). The [project README](../README.md)
+introduces the game.
 
-**[HOPPER.html](HOPPER.html)** gathers every document below, with the images and audio embedded, into one page that
+**[HOPPER.html](HOPPER.html)** gathers every document below into one page, with the images and audio embedded, so it
 reads offline in a browser.
 
 ---
@@ -41,14 +42,15 @@ reads offline in a browser.
 
 ## C64 Enhanced
 
-The C64 version's second look, chosen with F1 on the instructions page: the same game, more of the C64's hardware.
+Enhanced is the C64 version's second look, chosen with F1 on the instructions page. It's the same game, using more of
+the C64's hardware.
 
-| Document                                     | Covers                                                    |
-|:---------------------------------------------|:----------------------------------------------------------|
-| [enhanced.md](enhanced.md)                   | Overview, ground rules, the version switch, plan of work  |
-| [enhanced_graphics.md](enhanced_graphics.md) | Lanes, sprites, markings, scrolling, font, instructions   |
-| [enhanced_sound.md](enhanced_sound.md)       | SID voicing of the tunes, effects, a title tune           |
-| [enhanced_platform.md](enhanced_platform.md) | Version flag, hooks, raster interrupt, memory, testing    |
+| Document                                     | Covers                                                   |
+|:---------------------------------------------|:---------------------------------------------------------|
+| [enhanced.md](enhanced.md)                   | Overview, ground rules, the version switch, plan of work |
+| [enhanced_graphics.md](enhanced_graphics.md) | Lanes, sprites, markings, scrolling, font, instructions  |
+| [enhanced_sound.md](enhanced_sound.md)       | SID voicing of the tunes, effects, a title tune          |
+| [enhanced_platform.md](enhanced_platform.md) | Version flag, hooks, raster interrupt, memory, testing   |
 
 ---
 
@@ -60,5 +62,5 @@ The C64 version's second look, chosen with F1 on the instructions page: the same
 | [oric_specs.md](oric_specs.md)     | Oric Tech Specs: hardware, graphics, sound, emulators     |
 
 Oric names and addresses follow the reconstruction ([`src/hopper.s`](../src/hopper.s),
-[`src/vars.inc`](../src/vars.inc), [`src/oric.inc`](../src/oric.inc)). C64 names follow `c64/src/`; where a C64 routine
-replaces an Oric one it carries the Oric name with a `C64` suffix (`ReadKeys` becomes `ReadKeysC64`).
+[`src/vars.inc`](../src/vars.inc), [`src/oric.inc`](../src/oric.inc)). C64 names follow `c64/src/`. Where a C64 routine
+replaces an Oric one, it carries the Oric name with a `C64` suffix (`ReadKeys` becomes `ReadKeysC64`).

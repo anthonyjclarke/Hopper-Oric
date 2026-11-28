@@ -1,9 +1,9 @@
 # Hopper – C64 Remix: Changes from the Original
 
 The C64 version runs the Oric game's own code, every byte at its Oric address, so by default it plays exactly like the
-1983 tape. This chapter lists every place where it deliberately does **not**: what the original did, what the C64 does
-instead, why, and where the change lives. Anything not listed here is meant to behave as on the Oric; if it doesn't,
-that is a port bug, not a remix.
+1983 tape. This chapter lists every place where I've deliberately made it play **differently**: what the original did,
+what the C64 does instead, why, and where the change lives. Anything not listed here is meant to behave as it does on
+the Oric. If it doesn't, I treat that as a port bug.
 
 Each change to the game's own bytes is marked `; C64:` in `c64/src/hopper.s`, and the gameplay ones also say `(Remix)`.
 `make c64-diff` lists every game byte that differs from the Oric program. The Oric build (`src/hopper.s`) is never
@@ -31,18 +31,18 @@ changed: `make verify` keeps it byte-identical to the tape.
 
 ## 1. The Frog Can Hop to the Outermost Columns
 
-**Original.** The playfield is columns 2–39, but an off-by-one in `CheckFrogBounds` kills the frog on reaching column 2
-or covering column 39, so the visible grass at either edge can't be stood on, and a carried frog dies one column early
-(quirk 13 in [quirks.md](quirks.md)).
+**Original.** The playfield is columns 2–39, but an off-by-one in my `CheckFrogBounds` kills the frog on reaching
+column 2 or covering column 39. So the visible grass at either edge can't be stood on, and a carried frog dies one
+column early (quirk 13 in [quirks.md](quirks.md)).
 
-**C64 Remix.** The frog may stand anywhere in columns 2–39:
+**C64 Remix.** The frog can now stand anywhere in columns 2–39:
 
 - `CheckFrogBounds` allows `frog_col` 1 to `$25` (`cmp #$02` → `#$01`, `cmp #$25` → `#$26`, `$0FF3`, `$0FFB`).
 - A sideways hop that would leave the playfield is not made: the frog turns to face that way and stays put
   (`StepFrogC64`, called from `MoveFrog` at `$1410` instead of `StepFrog`). Hopping off the side is no longer a way to
-  die; it was an easy one to do by accident, since the grass looked free.
+  die. It was an easy one to do by accident, since the grass looked free.
 - A log or turtle carrying the frog past column 2 or 39 still kills it, but where it stands, before it moves
-  (`CarryFrogC64`, entered from `CarryFrog` at `$1180`). This keeps the death splat inside the playfield: drawn one
+  (`CarryFrogC64`, entered from `CarryFrog` at `$1180`). This keeps the death splat inside the playfield. Drawn one
   column further out, as the original rule would now do, it would overwrite the row's paper attribute in column 1 (or
   the next row's column 0) and turn two rows the wrong colour during the death flash.
 
@@ -59,12 +59,11 @@ down).
 asks for left, right, up and down in turn under the menu, and refuses P (pause), SPACE, RETURN, DEL, `:` `;` `=` (the
 frog's characters in the credits text), F1 (the version switch) and a key already chosen, showing CAN'T USE in red after
 the prompt (`RedefNote`) and waiting for another key. Before each prompt it waits until no key has been down for 5
-frames (`WaitNoKeys`), so the key that chose 2, or a bounce, isn't taken as LEFT. It
-writes each key's column select, row mask and key bit into the Oric's second key table (`keys_set2`), which the menu's
+frames (`WaitNoKeys`), so the key that chose 2, or a bounce, isn't taken as LEFT. It writes each key's column select, row mask and key bit into the Oric's second key table (`keys_set2`), which the menu's
 own code then copies into use as before, and puts the four key names into the instructions text.
 
 **Why.** Fixed punctuation keys don't survive host keymaps in VICE, and letting the player choose the keys is the usual
-C64 convention.
+C64 way of doing it.
 
 ---
 
@@ -72,8 +71,8 @@ C64 convention.
 
 **Original.** Z, X, `'`, `/`.
 
-**C64 Remix.** Z, X, K, M (left, right, up, down). Letters only: punctuation moves about with VICE's host keymaps (the
-first try, Z X `@` `/`, was unusable).
+**C64 Remix.** Z, X, K, M (left, right, up, down). I kept to letters because punctuation moves about with VICE's host
+keymaps, and the first try, Z X `@` `/`, was unusable.
 
 ---
 
@@ -114,15 +113,15 @@ attract loop (change 11).
 
 **C64 Remix.** On the C64, `$00`/`$01` is the 6510's port: `$20` in its direction register makes the banking lines
 inputs, which float high, so BASIC, KERNAL and I/O switched in and the machine hung in the KERNAL's interrupt code.
-`EraseFlyC64` writes them where the Oric's `tmp0` and `key_state` now live instead. Play is unchanged; this is a fix
-forced by the hardware, not a design change.
+`EraseFlyC64` writes them where the Oric's `tmp0` and `key_state` now live instead. Play is unchanged. The hardware
+forced this one on me, so it's a fix rather than a design change.
 
 ---
 
 ## 8. Hardware Stand-Ins
 
-Not remixes, but things that can't be the same on a C64, described in [porting.md](porting.md): the 28-row Oric screen
-is shown on 25 rows (three blank rows hidden per screen), in the C64's font, with per-row paper colours; the AY sound
+These are the things that can't be the same on a C64, rather than remixes, and [porting.md](porting.md) describes them.
+The 28-row Oric screen is shown on 25 rows (three blank rows hidden per screen), in the C64's font, with per-row paper colours; the AY sound
 plays on the SID; RESTORE is the Oric's RESET button; the delays run on a CIA clock (PAL plays 1.5% slow, NTSC 2.3%
 fast). Its **Known Differences** table lists what shows.
 
@@ -150,7 +149,7 @@ counts), then the hi-score table. `ReadKeysC64` checks the key on every key read
 the RESET button. The credits list it with the other keys, `RUN/STOP - QUIT GAME` above `P - PAUSE` (row 19, drawn by
 `CreditsEndC64`).
 
-**Why.** A player who wants another go, or the other version, had to play to the end or go back through both menus.
+**Why.** Anyone who wanted another go, or the other version, had to play to the end or go back through both menus.
 
 ---
 
@@ -171,6 +170,6 @@ attribute replaces the row's blink attribute at column 14, so the line holds sti
 
 ## Kept as in the Original
 
-Everything else, including the original's quirks and bugs: the branch into an instruction in `CheckFrogBounds`, the
+Everything else stays as it was, including the original's quirks and bugs: the branch into an instruction in `CheckFrogBounds`, the
 jump into `jsr ClearScreen`, the hidden RESET exit, "INSTRUCTONS", the unplayed first note of each tune and the rest of
 [quirks.md](quirks.md).

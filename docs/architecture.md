@@ -1,13 +1,13 @@
 # Hopper – Architecture
 
-How the game is put together, read from `src/hopper.s`; the C64 side is in [porting.md](porting.md) and
+This is how the game is put together, read from `src/hopper.s`. The C64 side is in [porting.md](porting.md) and
 [platform_layer.md](platform_layer.md).
 
 ---
 
 ## The Tape
 
-`original/HOPPER.TAP` holds one machine-code block, `$0500`–`$30D4`, flagged to autorun at `$0500`. There is no BASIC
+`original/HOPPER.TAP` holds one machine-code block, `$0500`–`$30D4`, flagged to autorun at `$0500`. There's no BASIC
 loader and no second block. The build writes the same 14-byte TAP header from the `TAPEHDR` segment
 ([source_guide.md](source_guide.md)).
 
@@ -35,12 +35,12 @@ loader and no second block. The build writes the same 14-byte TAP header from th
 | `$BA00`–`$BAFF` | Hi-score table, in the unused alternate character set          |
 | `$BB80`–`$BFDF` | Text screen, 40×28; row 27 is the status line                  |
 
-Most routines start on round addresses (`$0A00`, `$1000`, `$1400`, …) with `$FF`, `$55` or `$EA` filling the gaps, which
+Most routines start on round addresses (`$0A00`, `$1000`, `$1400`, …), with `$FF`, `$55` or `$EA` filling the gaps. That
 suggests the game was assembled by hand into a monitor rather than with an assembler.
 
 ### Oric-1 ROM Locations
 
-The game reads and writes the Oric-1 ROM's variables directly, so it needs the Oric-1 ROM (v1.0); the Atmos keeps them
+The game reads and writes the Oric-1 ROM's variables directly, so it needs the Oric-1 ROM (v1.0). The Atmos keeps them
 elsewhere.
 
 | Address | Name         | Use                                                                          |
@@ -71,7 +71,7 @@ flowchart TD
     J --> G
 ```
 
-`ColdStart` runs once, from the tape. `WarmStart` is also where the RESET button lands: `NmiHandler` clears the screen,
+`ColdStart` runs once, from the tape. `WarmStart` is also where the RESET button lands. `NmiHandler` clears the screen,
 puts the ROM font back, silences the AY, waits about two seconds and goes to `WarmStart`, so a reset keeps the
 hi-scores. If `key_state` reads `$28` during those two seconds it jumps to `$A800` instead ([quirks.md](quirks.md)).
 
@@ -79,8 +79,8 @@ hi-scores. If `key_state` reads `$28` during those two seconds it jumps to `$A80
 
 ## The Main Loop
 
-`NewGame` masks interrupts (`sei`) and calls `InitGame`; `NewLife` resets the stack, and every death and frog home jumps
-back there. Each pass of `MainLoop`:
+`NewGame` masks interrupts (`sei`) and calls `InitGame`. `NewLife` resets the stack, and every death and frog home jumps
+back there. Each pass of `MainLoop` runs through these steps:
 
 1. `FlyWarble`, `UpdateFly`: the fly's sound and its timer (from sheet 3).
 2. `CheckFrogBounds`, `MoveFrog`, `CheckFrogBounds`: read a move, hop, check what the frog landed on, score.
@@ -91,14 +91,14 @@ back there. Each pass of `MainLoop`:
    (`EraseFrogIfRoad`, `SpawnRow17` …, `RedrawFrogIfRoad`). `ServiceTimer` runs after each lane.
 6. `MoveSnake` every 8th pass, `AnimateTurtles` every 32nd from sheet 2 (masks `snake_speed`, `turtle_speed`).
 
-Collision is by screen contents: a road cell that is not a space kills the frog, a river cell that is a space drowns it.
-The four cells under the frog are kept in `under_frog` while it is drawn over them.
+Collision works on screen contents. A road cell that isn't a space kills the frog, and a river cell that is a space
+drowns it. The four cells under the frog are kept in `under_frog` while it's drawn over them.
 
 ---
 
 ## Timing
 
-Two clocks run the game:
+Two clocks run the game.
 
 | Clock        | Period                   | Drives                                                    |
 |:-------------|:-------------------------|:----------------------------------------------------------|
@@ -106,20 +106,20 @@ Two clocks run the game:
 | VIA timer 2  | `$606B` µs (24.7 ms)     | `ServiceTimer`: TIME every 32 periods (0.79 s), hop sound |
 
 `ServiceTimer` polls the VIA's timer 2 flag, so it runs from `FrameDelay`, `DelayX` and the lane loop rather than from
-an interrupt. Lanes move every 5–13 frames to start with; the speed-ups lower `lane_speeds` (to 3 at least) and, every
+an interrupt. Lanes move every 5–13 frames to start with, and the speed-ups lower `lane_speeds` (to 3 at least) and, every
 eighth sheet, `game_delay` ([player_guide.md](player_guide.md#sheets)).
 
 ### Interrupts
 
 In the menus and the attract cycle the Oric ROM's own interrupt runs (VIA timer 1, about 100 Hz, set up by
-`InitTimers`): it scans the keyboard into `ROM_KEY` and blinks the cursor, which the game has pointed into ROM. For play
+`InitTimers`). It scans the keyboard into `ROM_KEY` and blinks the cursor, which the game has pointed into ROM. For play,
 `NewGame` masks it, and `ReadKeys` scans the five control keys itself through the VIA and the AY's I/O port.
 
 ---
 
 ## The C64
 
-The C64 version runs this same code at the same addresses, with the hardware calls patched to a platform layer: the Oric
+The C64 version runs this same code at the same addresses, with the hardware calls patched to a platform layer. The Oric
 screen at `$BB80` is copied to the VIC-II, the AY writes go to the SID, the keys come from the CIA, and both clocks are
 timed on a CIA. The raster interrupt keeps running through play, so the `sei` at `NewGame` became a `nop`
 ([porting.md](porting.md)).

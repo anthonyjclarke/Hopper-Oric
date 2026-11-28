@@ -1,8 +1,8 @@
 # Hopper – Sound
 
-Everything here is read from the code. The Oric plays all of it on its AY-3-8912 through `AYWrite`; the C64 plays the
-same register writes on the SID ([C64 Playback](#c64-playback)). The [recordings](#recordings) are of the C64 port in
-VICE.
+Everything here is read from the code. The Oric plays all of it on its AY-3-8912 through `AYWrite`, and the C64 plays
+the same register writes on the SID ([C64 Playback](#c64-playback)). The [recordings](#recordings) are of the C64 port
+in VICE.
 
 ---
 
@@ -16,9 +16,9 @@ Every effect and tune goes through `SoundWrite`, which applies the choice made o
 | 1            | 2    | The value as given                              |
 | 2            | 3    | Writes to the volume registers 8–10 are doubled |
 
-The volumes the game writes go up to 7 (the low-time tone), mostly 2–4, so doubled they still fit the AY's 0–15; it
-never uses the AY's envelope generator. `SilenceAll` sets the three volumes to 0; `LoadAYRegs` writes all 14 registers
-from a table (`ay_game_regs` at the start of play, `ay_quiet_regs` to stop).
+The volumes the game writes go up to 7 (the low-time tone) and are mostly 2–4, so doubled they still fit the AY's 0–15.
+The game never uses the AY's envelope generator. `SilenceAll` sets the three volumes to 0, and `LoadAYRegs` writes all
+14 registers from a table (`ay_game_regs` at the start of play, `ay_quiet_regs` to stop).
 
 ---
 
@@ -39,10 +39,10 @@ from a table (`ay_game_regs` at the start of play, `ay_quiet_regs` to stop).
 
 ## Music
 
-**In-game tunes.** Four tunes at `tune_ptrs`; `PickTune` picks one at random at the start of a sheet and after each
-death, and `MusicTick` steps it once per main-loop pass on one channel. Each note is a pair: the note (1–12, 0 = rest)
-and the octave in the high nibble with the length in the low one. The tone period is `note_periods` (one octave) shifted
-right once per octave. `tune_params` gives each tune's tempo and length.
+**In-game tunes.** There are four tunes at `tune_ptrs`. `PickTune` picks one at random at the start of a sheet and
+after each death, and `MusicTick` steps it once per main-loop pass on one channel. Each note is a pair of bytes: the
+note (1–12, 0 = rest), then the octave in the high nibble with the length in the low one. The tone period is
+`note_periods` (one octave) shifted right once per octave, and `tune_params` gives each tune's tempo and length.
 
 **Sheet tune.** `PlaySheetTune` plays `sheet_tune` under the sheet-start signs: 29 steps of three bytes, one note per
 channel, with the step lengths in `sheet_tune_lens`.
@@ -53,7 +53,7 @@ The data layouts are in [data_formats.md](data_formats.md#sound).
 
 ## C64 Playback
 
-`AyWriteC64` replaces `AYWrite` (the patch is at `$1FAD`): it keeps a copy of the 14 AY registers and drives SID voices
+`AyWriteC64` replaces `AYWrite` (the patch is at `$1FAD`). It keeps a copy of the 14 AY registers and drives SID voices
 1–3 from them.
 
 | AY                               | SID                                                             |
@@ -64,16 +64,16 @@ The data layouts are in [data_formats.md](data_formats.md#sound).
 | A louder volume                  | Retriggers the envelope                                         |
 | A softer volume                  | Lets the voice decay to the new sustain level                   |
 
-The SID has one master volume, so the per-channel levels become sustain levels. Not yet checked by ear against the Oric
-([porting.md](porting.md#sound)).
+The SID has one master volume, so the per-channel levels become sustain levels. I haven't yet checked it by ear against
+the Oric ([porting.md](porting.md#sound)).
 
 ---
 
 ## Recordings
 
-Recorded from the C64 port in VICE (PAL, reSID, loud sound) by `make c64-sound` (`tools/c64_sound.py`), so they are
-what the AY's register writes sound like on the SID, not the Oric itself. The sound build plays the four in-game tunes
-in order instead of at random (`AUTOTEST_SOUND`); everything else is the game as it runs.
+These were recorded from the C64 port in VICE (PAL, reSID, loud sound) by `make c64-sound` (`tools/c64_sound.py`), so
+they're what the AY's register writes sound like on the SID rather than the Oric itself. The sound build plays the four
+in-game tunes in order instead of at random (`AUTOTEST_SOUND`); everything else is the game as it runs.
 
 | Recording         | What it is                                   |
 |:------------------|:---------------------------------------------|
@@ -102,6 +102,6 @@ in order instead of at random (`AUTOTEST_SOUND`); everything else is the game as
 
 ![Low time](sound/effect-low-time.m4a)
 
-Not recorded yet: the fly's warble and bonus beeps and the time bonus, which need a frog in a home (the sound build's
-frog sits on the verge). The first note of each tune is never played ([quirks.md](quirks.md)), so each recording starts
-on its second.
+Still to record are the fly's warble and bonus beeps and the time bonus. They need a frog in a home, and the sound
+build's frog sits on the verge. The first note of each tune is never played ([quirks.md](quirks.md)), so each recording
+starts on its second.

@@ -1,7 +1,7 @@
 # Hopper – The C64 Platform Layer
 
-The C64 code under the patched game, module by module, read from `c64/src/`. Why it is built this way is in
-[porting.md](porting.md); this chapter is the reference for each routine.
+This is the C64 code that sits under the patched game, module by module, read from `c64/src/`. Why it's built this way
+is in [porting.md](porting.md); this chapter is the reference for each routine.
 
 ---
 
@@ -57,8 +57,8 @@ The C64 code under the patched game, module by module, read from `c64/src/`. Why
 
 ## Timing
 
-CIA2's timers A and B are chained into a free-running 24-bit clock of CPU cycles; `ReadClock` reads it into `zNow`. One
-C64 cycle stands for one Oric microsecond.
+CIA2's timers A and B are chained into a free-running 24-bit clock of CPU cycles, and `ReadClock` reads it into `zNow`.
+One C64 cycle stands for one Oric microsecond.
 
 | Routine         | Does                                                                                                                                                                                                                                                                               |
 |:----------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -79,9 +79,9 @@ C64 cycle stands for one Oric microsecond.
 
 **The raster interrupt.** An interrupt at the last line of each text row (`RowLine`) sets `$D016`, `$D021` and `$D018`
 for the next row from `rowCtl2`, `rowPaper` and `rowCset` as they are at that moment, so a row that `Present` recolours
-or turns double height mid-frame is shown right in that frame. `rowCtl2` is `$08` but in Enhanced play, where it adds
+or turns double height mid-frame is shown right in that frame. `rowCtl2` is `$08` except in Enhanced play, where it adds
 multicolour and the lanes' fine scroll (V4, [enhanced_platform.md](enhanced_platform.md#raster-interrupt)). The three
-stores have no cycle to spare; in Enhanced play the one stored last is a register that doesn't change at that boundary
+stores have no cycle to spare, so in Enhanced play the one stored last is a register that doesn't change at that boundary
 (`IrqArmPlay`), as the frog's sprites can push it late. The frame interrupt at line
 `FRAME_IRQ_LINE` sets row 0's, counts `zTick`, flips the blink phase every 16 frames, and runs the Oric ROM interrupt's
 jobs while `zRomIrq` is set: `ScanRomKey` and `CursorBlink`.
@@ -90,7 +90,7 @@ jobs while `zRomIrq` is set: `ScanRomKey` and `CursorBlink`.
 
 ## Video
 
-The game draws on its Oric screen at `$BB80`; the VIC shows a text screen at `$8000` in bank 2, with the game's
+The game draws on its Oric screen at `$BB80`, and the VIC shows a text screen at `$8000` in bank 2, with the game's
 character set at `$B000` and two double-height sets at `$A000` and `$A800`.
 
 | Routine           | Does                                                                                                                                        |
